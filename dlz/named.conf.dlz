@@ -1,0 +1,48 @@
+// gov.dn42 bind9 DLZ 模块配置
+//
+// bind9 通过 DLZ (Dynamically Loadable Zones) 驱动直接查询 PostgreSQL
+// 中的委派记录，无需手动维护 zone 文件。
+//
+// 安装：
+//   1. 确保 bind9 编译时启用了 DLZ PostgreSQL 驱动
+//      （Debian/Ubuntu 默认包已启用：named -V | grep dlz）
+//   2. 加载视图：psql -d gov_dn42 -f dlz/dlz-views.sql
+//   3. 将本文件内容加入 named.conf：
+//      include "/etc/bind/named.conf.dlz";
+//   4. 重启：sudo systemctl restart bind9
+//
+// 查询日志：tail -f /var/log/syslog | grep named
+// 测试：dig @localhost home.gov.dn42 NS
+
+dlz "gov-dn42" {
+    database "postgres
+        {dbname=gov_dn42}
+        {user=gov_dn42}
+        {password=CHANGE_ME}
+        {host=localhost}
+        {port=5432}
+
+        // 查找 zone：通过 zone 名称判断是否为已批准委派
+        {select zone from dlz_zones where zone_name = '$zone$'}
+
+        // 查找 SOA：每个 zone 必须至少有一条 SOA
+        {select ttl, type, data from dlz_records
+         where zone_name = '$zone$' and type = 'SOA' and host = '$zone$'}
+
+        // 查找 NS（zone 委派）
+        {select ttl, type, data from dlz_records
+         where zone_name = '$zone$' and type = 'NS' and host = '$zone$'}
+
+        // 查找 DS（DNSSEC 委派签名）
+        {select ttl, type, data from dlz_records
+         where zone_name = '$zone$' and type = 'DS' and host = '$zone$'}
+
+        // 通用查找（按 host + type）
+        {select ttl, type, data from dlz_records
+         where zone_name = '$zone$' and host = '$record$' and type = '$type$'}
+
+        // 列出 zone 所有记录（AXFR 用，可选）
+        {select ttl, type, host, data from dlz_records
+         where zone_name = '$zone$'}
+    ";
+};
