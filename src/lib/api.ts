@@ -22,6 +22,11 @@ export interface RegistrationPayload {
   contact: string;
   note?: string;
   agree: true;
+  /** 已认证用户标识；后端凭此核验申请人身份 */
+  auth?: {
+    providerId: string;
+    sub: string;
+  };
 }
 
 export interface RegistrationReceipt {
@@ -124,6 +129,42 @@ export const submissionsApi = {
   /** 提交举报或意见 */
   submit: (payload: SubmissionPayload) =>
     request<SubmissionReceipt>('/submissions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }),
+};
+
+/* ============================================================
+   OIDC 身份认证接口
+   前端完成 Authorization Code + PKCE 重定向后，回调页将 code 交由后端
+   换取 token 并校验，后端回传已认证用户信息。
+   ============================================================ */
+
+export interface OidcCallbackPayload {
+  providerId: string;
+  code: string;
+  /** PKCE code_verifier，由后端用于换取 token */
+  codeVerifier: string;
+  /** 授权重定向地址，供后端校验 */
+  redirectUri: string;
+}
+
+export interface OidcAuthResult {
+  user: {
+    providerId: string;
+    sub: string;
+    name?: string;
+    email?: string;
+    dn42?: string;
+  };
+}
+
+/** OIDC 认证接口 */
+export const authApi = {
+  /** 用授权码换取已认证用户信息（后端完成 token 交换与 ID token 校验） */
+  callback: (payload: OidcCallbackPayload) =>
+    request<OidcAuthResult>('/auth/oidc/callback', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),

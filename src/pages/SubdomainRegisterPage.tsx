@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { useI18n } from '../i18n';
 import { Breadcrumb } from '../components/layout/Breadcrumb';
 import { ApiError, isServiceUnavailable, subdomainApi } from '../lib/api';
+import { clearOidcUser, loadOidcUser, OIDC_PROVIDERS, redirectToAuthorize, type OidcUser } from '../lib/oidc';
 import { usePageTitle } from '../lib/usePageTitle';
 
 type AvailabilityState =
@@ -20,7 +21,6 @@ type SubmitState =
   | { kind: 'error'; title: string }
   | { kind: 'offline' };
 
-/** 命名规则：小写字母/数字，连字符不得出现在首尾，长度 2-63 */
 const NAME_PATTERN = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/;
 
 const PURPOSE_OPTIONS = [
@@ -44,11 +44,93 @@ export default function SubdomainRegisterPage() {
   const { t } = useI18n();
   usePageTitle(t('subdomain.title'));
 
+  const [user, setUser] = useState<OidcUser | null>(() => loadOidcUser());
+
+  const handleLogin = async (providerId: string) => {
+    const provider = OIDC_PROVIDERS.find((p) => p.id === providerId);
+    if (!provider) return;
+    try {
+      await redirectToAuthorize(provider);
+    } catch (err) {
+      // client_id 未配置等错误：提示用户
+      console.error(err);
+      alert(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const handleLogout = () => {
+    clearOidcUser();
+    setUser(null);
+  };
+
+  return (
+    <>
+      <div className='page-head'>
+        <div className='container'>
+          <Breadcrumb items={[{ label: t('nav.services'), to: '/services' }, { label: t('subdomain.title') }]} />
+          <h1>{t('subdomain.title')}</h1>
+          <p className='page-head__sub'>{t('subdomain.sub')}</p>
+        </div>
+      </div>
+
+      <div className='container page-body'>
+        <section className='about-section' aria-labelledby='subdomain-auth'>
+          <h2 className='section-title' id='subdomain-auth'>
+            {t('subdomain.authTitle')}
+          </h2>
+          {user ? (
+            <div className='callout callout--gold'>
+              <p>
+                <strong>{t('subdomain.loggedInAs')}：</strong>
+                {user.name ?? user.sub}
+                {user.dn42 && ` · dn42: ${user.dn42}`}
+                {user.email && ` · ${user.email}`}
+              </p>
+              <p>
+                <button type='button' className='btn btn--outline' onClick={handleLogout}>
+                  {t('subdomain.logout')}
+                </button>
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className='callout' role='note'>
+                <p>
+                  <strong>{t('subdomain.authRequired')}</strong>
+                  {t('subdomain.authRequiredBody')}
+                </p>
+              </div>
+              <p>{t('subdomain.loginIntro')}</p>
+              <div className='hero__actions'>
+                {OIDC_PROVIDERS.map((provider) => (
+                  <button
+                    key={provider.id}
+                    type='button'
+                    className='btn btn--outline'
+                    onClick={() => void handleLogin(provider.id)}
+                  >
+                    {t('subdomain.loginWith').replace('{provider}', provider.displayName)}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </section>
+
+        {user && (
+          <SubdomainForm user={user} t={t} />
+        )}
+      </div>
+    </>
+  );
+}
+
+function SubdomainForm({ user, t }: { user: OidcUser; t: (key: string) => string }) {
   const [name, setName] = useState('');
   const [purpose, setPurpose] = useState<string>(PURPOSE_OPTIONS[0].value);
   const [ipv4, setIpv4] = useState('');
   const [ipv6, setIpv6] = useState('');
-  const [contact, setContact] = useState('');
+  const [contact, setContact] = useState(user.email ?? '');
   const [note, setNote] = useState('');
   const [agree, setAgree] = useState(false);
 
@@ -78,10 +160,7 @@ export default function SubdomainRegisterPage() {
       if (result.available) {
         setAvailability({ kind: 'ok', message: `“${candidate}.dn42” ${t('subdomain.availOk')}` });
       } else {
-        setAvailability({
-          kind: 'bad',
-          message: `“${candidate}.dn42” ${t('subdomain.availBad')}`,
-        });
+        setAvailability({ kind: 'bad', message: `“${candidate}.dn42” ${t('subdomain.availBad')}` });
       }
     } catch (err) {
       setAvailability({
@@ -133,6 +212,7 @@ export default function SubdomainRegisterPage() {
         contact: contact.trim(),
         note: note.trim() || undefined,
         agree: true,
+        auth: { providerId: user.providerId, sub: user.sub },
       });
       setSubmit({ kind: 'success', id: receipt.id, name: receipt.name });
     } catch (err) {
@@ -148,205 +228,195 @@ export default function SubdomainRegisterPage() {
 
   return (
     <>
-      <div className='page-head'>
-        <div className='container'>
-          <Breadcrumb items={[{ label: t('nav.services'), to: '/services' }, { label: t('subdomain.title') }]} />
-          <h1>{t('subdomain.title')}</h1>
-          <p className='page-head__sub'>{t('subdomain.sub')}</p>
-        </div>
-      </div>
+      <section className='about-section' aria-labelledby='subdomain-guide'>
+        <h2 className='section-title' id='subdomain-guide'>
+          {t('subdomain.guideTitle')}
+        </h2>
+        <ol className='steps'>
+          <li>
+            <strong>{t('subdomain.step1Title')}</strong>
+            {t('subdomain.step1Desc')}
+          </li>
+          <li>
+            <strong>{t('subdomain.step2Title')}</strong>
+            {t('subdomain.step2Desc')}
+          </li>
+          <li>
+            <strong>{t('subdomain.step3Title')}</strong>
+            {t('subdomain.step3Desc')}
+          </li>
+        </ol>
+      </section>
 
-      <div className='container page-body'>
-        <section className='about-section' aria-labelledby='subdomain-guide'>
-          <h2 className='section-title' id='subdomain-guide'>
-            {t('subdomain.guideTitle')}
-          </h2>
-          <ol className='steps'>
-            <li>
-              <strong>{t('subdomain.step1Title')}</strong>
-              {t('subdomain.step1Desc')}
-            </li>
-            <li>
-              <strong>{t('subdomain.step2Title')}</strong>
-              {t('subdomain.step2Desc')}
-            </li>
-            <li>
-              <strong>{t('subdomain.step3Title')}</strong>
-              {t('subdomain.step3Desc')}
-            </li>
-          </ol>
-        </section>
+      <section className='about-section' aria-labelledby='subdomain-form'>
+        <h2 className='section-title' id='subdomain-form'>
+          {t('subdomain.formTitle')}
+        </h2>
 
-        <section className='about-section' aria-labelledby='subdomain-form'>
-          <h2 className='section-title' id='subdomain-form'>
-            {t('subdomain.formTitle')}
-          </h2>
-
-          <form className='form-panel' onSubmit={handleSubmit} noValidate>
-            <div className='form-grid'>
-              <div className={`form-field form-field--full${nameError ? ' has-error' : ''}`}>
-                <label htmlFor='sub-name'>
-                  {t('subdomain.nameLabel')}
-                  <span className='req' aria-hidden='true'>
-                    *
-                  </span>
-                </label>
-                <div className='input-group'>
-                  <input
-                    id='sub-name'
-                    type='text'
-                    value={name}
-                    onChange={(event) => setName(event.target.value)}
-                    placeholder={t('subdomain.namePlaceholder')}
-                    autoComplete='off'
-                    aria-describedby='sub-name-hint'
-                  />
-                  <span className='suffix' aria-hidden='true'>
-                    {t('subdomain.suffix')}
-                  </span>
-                  <button type='button' className='btn btn--outline' onClick={handleCheck} disabled={availability.kind === 'checking'}>
-                    {availability.kind === 'checking' ? t('subdomain.checking') : t('subdomain.checkAvail')}
-                  </button>
-                </div>
-                {nameError ? (
-                  <p className='field-error' role='alert'>
-                    {nameError}
-                  </p>
-                ) : (
-                  <p className='form-hint' id='sub-name-hint'>
-                    {t('subdomain.nameHint')}
-                  </p>
-                )}
-                {availability.kind !== 'idle' && (
-                  <p className={`avail-status avail-status--${availability.kind === 'ok' ? 'ok' : availability.kind === 'bad' ? 'bad' : 'info'}`} role='status'>
-                    {availability.kind === 'checking' ? t('subdomain.checkingMsg') : availability.message}
-                  </p>
-                )}
-              </div>
-
-              <div className='form-field'>
-                <label htmlFor='sub-purpose'>{t('subdomain.purposeLabel')}</label>
-                <select id='sub-purpose' value={purpose} onChange={(event) => setPurpose(event.target.value)}>
-                  {PURPOSE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {t(option.labelKey)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className='form-field'>
-                <label htmlFor='sub-contact'>
-                  {t('subdomain.contactLabel')}
-                  <span className='req' aria-hidden='true'>
-                    *
-                  </span>
-                </label>
+        <form className='form-panel' onSubmit={handleSubmit} noValidate>
+          <div className='form-grid'>
+            <div className={`form-field form-field--full${nameError ? ' has-error' : ''}`}>
+              <label htmlFor='sub-name'>
+                {t('subdomain.nameLabel')}
+                <span className='req' aria-hidden='true'>
+                  *
+                </span>
+              </label>
+              <div className='input-group'>
                 <input
-                  id='sub-contact'
-                  type='email'
-                  value={contact}
-                  onChange={(event) => setContact(event.target.value)}
-                  placeholder={t('subdomain.contactPlaceholder')}
-                  autoComplete='email'
-                />
-              </div>
-
-              <div className='form-field'>
-                <label htmlFor='sub-ipv4'>{t('subdomain.ipv4Label')}</label>
-                <input
-                  id='sub-ipv4'
+                  id='sub-name'
                   type='text'
-                  value={ipv4}
-                  onChange={(event) => setIpv4(event.target.value)}
-                  placeholder={t('subdomain.ipv4Placeholder')}
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder={t('subdomain.namePlaceholder')}
                   autoComplete='off'
-                  inputMode='numeric'
+                  aria-describedby='sub-name-hint'
                 />
-                <span className='form-hint'>{t('subdomain.ipvHint')}</span>
-              </div>
-
-              <div className='form-field'>
-                <label htmlFor='sub-ipv6'>{t('subdomain.ipv6Label')}</label>
-                <input
-                  id='sub-ipv6'
-                  type='text'
-                  value={ipv6}
-                  onChange={(event) => setIpv6(event.target.value)}
-                  placeholder={t('subdomain.ipv6Placeholder')}
-                  autoComplete='off'
-                />
-              </div>
-
-              <div className='form-field form-field--full'>
-                <label htmlFor='sub-note'>{t('subdomain.noteLabel')}</label>
-                <textarea
-                  id='sub-note'
-                  value={note}
-                  onChange={(event) => setNote(event.target.value)}
-                  placeholder={t('subdomain.notePlaceholder')}
-                  rows={4}
-                />
-              </div>
-
-              <div className='form-field form-field--full'>
-                <label className='form-check'>
-                  <input type='checkbox' checked={agree} onChange={(event) => setAgree(event.target.checked)} />
-                  <span>
-                    {t('subdomain.agreeText')}
-                    <Link to='/policy'>{t('subdomain.agreePolicy')}</Link>
-                    {t('subdomain.agreeSuffix')}
-                  </span>
-                </label>
-              </div>
-
-              <div className='form-actions'>
-                <button type='submit' className='btn btn--primary' disabled={submit.kind === 'submitting'}>
-                  {submit.kind === 'submitting' ? t('subdomain.submitting') : t('subdomain.submit')}
+                <span className='suffix' aria-hidden='true'>
+                  {t('subdomain.suffix')}
+                </span>
+                <button type='button' className='btn btn--outline' onClick={handleCheck} disabled={availability.kind === 'checking'}>
+                  {availability.kind === 'checking' ? t('subdomain.checking') : t('subdomain.checkAvail')}
                 </button>
-                <span className='form-hint'>{t('subdomain.submitHint')}</span>
               </div>
+              {nameError ? (
+                <p className='field-error' role='alert'>
+                  {nameError}
+                </p>
+              ) : (
+                <p className='form-hint' id='sub-name-hint'>
+                  {t('subdomain.nameHint')}
+                </p>
+              )}
+              {availability.kind !== 'idle' && (
+                <p className={`avail-status avail-status--${availability.kind === 'ok' ? 'ok' : availability.kind === 'bad' ? 'bad' : 'info'}`} role='status'>
+                  {availability.kind === 'checking' ? t('subdomain.checkingMsg') : availability.message}
+                </p>
+              )}
             </div>
 
-            {submit.kind === 'success' && (
-              <div className='form-status form-status--ok' role='status'>
-                <p>
-                  <strong>{t('subdomain.submitOkTitle')}</strong>
-                  {t('subdomain.receiptId')}
-                  <code>{submit.id}</code>，{t('subdomain.receiptName')}
-                  <code>{submit.name}.dn42</code>。
-                </p>
-                <p>{t('subdomain.submitOkBody')}</p>
-              </div>
-            )}
+            <div className='form-field'>
+              <label htmlFor='sub-purpose'>{t('subdomain.purposeLabel')}</label>
+              <select id='sub-purpose' value={purpose} onChange={(event) => setPurpose(event.target.value)}>
+                {PURPOSE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {t(option.labelKey)}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-            {submit.kind === 'error' && (
-              <div className='form-status form-status--error' role='alert'>
-                <p>{submit.title}</p>
-              </div>
-            )}
+            <div className='form-field'>
+              <label htmlFor='sub-contact'>
+                {t('subdomain.contactLabel')}
+                <span className='req' aria-hidden='true'>
+                  *
+                </span>
+              </label>
+              <input
+                id='sub-contact'
+                type='email'
+                value={contact}
+                onChange={(event) => setContact(event.target.value)}
+                placeholder={t('subdomain.contactPlaceholder')}
+                autoComplete='email'
+              />
+            </div>
 
-            {submit.kind === 'offline' && (
-              <div className='form-status form-status--warn' role='status'>
-                <p>
-                  <strong>{t('subdomain.submitOfflineTitle')}</strong>
-                  {t('subdomain.submitOfflineBody')}
-                </p>
-                <p>{t('subdomain.submitOfflineNote')}</p>
-              </div>
-            )}
-          </form>
-        </section>
+            <div className='form-field'>
+              <label htmlFor='sub-ipv4'>{t('subdomain.ipv4Label')}</label>
+              <input
+                id='sub-ipv4'
+                type='text'
+                value={ipv4}
+                onChange={(event) => setIpv4(event.target.value)}
+                placeholder={t('subdomain.ipv4Placeholder')}
+                autoComplete='off'
+                inputMode='numeric'
+              />
+              <span className='form-hint'>{t('subdomain.ipvHint')}</span>
+            </div>
 
-        <section className='about-section' aria-labelledby='subdomain-rules'>
-          <h2 className='section-title' id='subdomain-rules'>
-            {t('subdomain.rulesTitle')}
-          </h2>
-          <div className='callout'>
-            <p>{t('subdomain.rulesBody')}</p>
+            <div className='form-field'>
+              <label htmlFor='sub-ipv6'>{t('subdomain.ipv6Label')}</label>
+              <input
+                id='sub-ipv6'
+                type='text'
+                value={ipv6}
+                onChange={(event) => setIpv6(event.target.value)}
+                placeholder={t('subdomain.ipv6Placeholder')}
+                autoComplete='off'
+              />
+            </div>
+
+            <div className='form-field form-field--full'>
+              <label htmlFor='sub-note'>{t('subdomain.noteLabel')}</label>
+              <textarea
+                id='sub-note'
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
+                placeholder={t('subdomain.notePlaceholder')}
+                rows={4}
+              />
+            </div>
+
+            <div className='form-field form-field--full'>
+              <label className='form-check'>
+                <input type='checkbox' checked={agree} onChange={(event) => setAgree(event.target.checked)} />
+                <span>
+                  {t('subdomain.agreeText')}
+                  <Link to='/policy'>{t('subdomain.agreePolicy')}</Link>
+                  {t('subdomain.agreeSuffix')}
+                </span>
+              </label>
+            </div>
+
+            <div className='form-actions'>
+              <button type='submit' className='btn btn--primary' disabled={submit.kind === 'submitting'}>
+                {submit.kind === 'submitting' ? t('subdomain.submitting') : t('subdomain.submit')}
+              </button>
+              <span className='form-hint'>{t('subdomain.submitHint')}</span>
+            </div>
           </div>
-        </section>
-      </div>
+
+          {submit.kind === 'success' && (
+            <div className='form-status form-status--ok' role='status'>
+              <p>
+                <strong>{t('subdomain.submitOkTitle')}</strong>
+                {t('subdomain.receiptId')}
+                <code>{submit.id}</code>，{t('subdomain.receiptName')}
+                <code>{submit.name}.dn42</code>。
+              </p>
+              <p>{t('subdomain.submitOkBody')}</p>
+            </div>
+          )}
+
+          {submit.kind === 'error' && (
+            <div className='form-status form-status--error' role='alert'>
+              <p>{submit.title}</p>
+            </div>
+          )}
+
+          {submit.kind === 'offline' && (
+            <div className='form-status form-status--warn' role='status'>
+              <p>
+                <strong>{t('subdomain.submitOfflineTitle')}</strong>
+                {t('subdomain.submitOfflineBody')}
+              </p>
+              <p>{t('subdomain.submitOfflineNote')}</p>
+            </div>
+          )}
+        </form>
+      </section>
+
+      <section className='about-section' aria-labelledby='subdomain-rules'>
+        <h2 className='section-title' id='subdomain-rules'>
+          {t('subdomain.rulesTitle')}
+        </h2>
+        <div className='callout'>
+          <p>{t('subdomain.rulesBody')}</p>
+        </div>
+      </section>
     </>
   );
 }

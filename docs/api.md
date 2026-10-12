@@ -214,6 +214,90 @@ Content-Type: application/json
 - 举报人信息严格保密；日志默认写入 `/dev/null`，可在后端配置为持久化存储
 - 留档保留期限由部署方决定；本契约不强制要求查询接口
 
+### 5. OIDC 身份认证回调
+
+子域名注册等需实名的在线服务，以 DN42 社区内部 OIDC 为前置认证。前端采用
+Authorization Code + PKCE 流程发起授权；回调页将授权码交由后端换取 token 并校验
+ID token 签名，后端回传已认证用户信息。
+
+支持的 OIDC 提供商（发现端点）：
+
+| 提供商标识 | 发现文档 |
+| --- | --- |
+| `iedon` | `https://auth.iedon.net/.well-known/openid-configuration` |
+| `g-load` | `https://dn42.g-load.eu/.well-known/openid-configuration` |
+| `hexpnet` | `https://auth42.hexpnet.work/.well-known/openid-configuration` |
+
+请求的 scope：`openid profile email dn42`（`dn42` 为社区专属声明）。
+
+```
+POST /api/v1/auth/oidc/callback
+Content-Type: application/json
+```
+
+**请求体**
+
+```json
+{
+  "providerId": "iedon",
+  "code": "授权码",
+  "codeVerifier": "PKCE code_verifier",
+  "redirectUri": "https://gov.dn42/auth/callback"
+}
+```
+
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `providerId` | string | 是 | `iedon` / `g-load` / `hexpnet` |
+| `code` | string | 是 | OIDC 提供商重定向回传的授权码 |
+| `codeVerifier` | string | 是 | 前端生成的 PKCE code_verifier |
+| `redirectUri` | string | 是 | 授权时使用的重定向地址，须与授权请求一致 |
+
+**响应 200**
+
+```json
+{
+  "user": {
+    "providerId": "iedon",
+    "sub": "subject-id",
+    "name": "Display Name",
+    "email": "user@example.com",
+    "dn42": "AS-号码或社区标识"
+  }
+}
+```
+
+后端处理流程：使用 `code` + `codeVerifier` 向提供商 token 端点换取 token；
+校验 ID token 的 `iss`、`aud`、`exp` 与签名（RS256，JWKS 见各提供商发现文档）；
+提取 `sub`、`name`、`email`、`dn42` 等声明回传前端。
+
+**错误**
+
+- `400 VALIDATION_ERROR`：`providerId` 不支持、`code` 缺失或 state/verifier 校验失败
+- `401 AUTH_FAILED`：token 交换或 ID token 校验失败
+- `502 UPSTREAM_ERROR`：OIDC 提供商不可达
+
+> 前端将 **网络失败 / 404 / 405 / 5xx** 统一识别为“认证服务尚未上线”并优雅降级。
+
+### 子域名注册的认证要求
+
+`POST /api/v1/subdomains`（接口 2）在引入 OIDC 后，请求体增加可选字段 `auth`：
+
+```json
+{
+  "name": "example",
+  "purpose": "personal",
+  "...": "...",
+  "auth": {
+    "providerId": "iedon",
+    "sub": "subject-id"
+  }
+}
+```
+
+后端凭 `auth.providerId` + `auth.sub` 与已认证会话核验申请人身份；未通过认证的
+申请将返回 `401 AUTH_REQUIRED`。
+
 ## 后端实现建议
 
 - **同源部署（推荐）**：前端静态托管后，`/api/v1` 由反向代理转发至后端服务，避免 CORS；
@@ -228,4 +312,4 @@ Content-Type: application/json
 
 | 日期 | 说明 |
 | --- | --- |
-| 2026-10-12 | 初版契约草案发布；新增举报与意见箱提交接口（`POST /api/v1/submissions`） |
+| 2026-10-12 | 初版契约草案发布；新增举报与意见箱提交接口（`POST /api/v1/submissions`）；新增 OIDC 认证回调接口（`POST /api/v1/auth/oidc/callback`） |
