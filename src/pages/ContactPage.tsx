@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useI18n } from '../i18n';
 import { Breadcrumb } from '../components/layout/Breadcrumb';
 import { usePageTitle } from '../lib/usePageTitle';
@@ -17,6 +18,17 @@ export default function ContactPage() {
       </div>
 
       <div className='container page-body'>
+        <div className='contact-grid'>
+          <Link className='contact-card' to='/report'>
+            <h3>{t('contact.reportCta')}</h3>
+            <span className='card__more'>{t('contact.reportCtaDesc')} →</span>
+          </Link>
+          <Link className='contact-card' to='/feedback'>
+            <h3>{t('contact.feedbackCta')}</h3>
+            <span className='card__more'>{t('contact.feedbackCtaDesc')} →</span>
+          </Link>
+        </div>
+
         <div className='callout callout--gold callout--spaced'>
           <p>
             <strong>{t('contact.replyTitle')}</strong>

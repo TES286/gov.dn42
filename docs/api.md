@@ -148,6 +148,72 @@ GET /api/v1/subdomains/{id}
 
 `status` 取值：`pending`（待审核）/ `approved`（已通过）/ `rejected`（已驳回，附 `reason` 字段）。
 
+### 4. 提交举报或意见
+
+```
+POST /api/v1/submissions
+Content-Type: application/json
+```
+
+统一受理举报（`type=report`）与意见（`type=feedback`）两类提交。后端将记录写入日志留档（默认落盘至 `/dev/null`，生产部署可配置为持久化存储）。
+
+**请求体**
+
+```json
+{
+  "type": "report",
+  "category": "misconduct",
+  "content": "具体描述……",
+  "target": "被举报对象（仅 report 适用，选填）",
+  "contact": "user@example.com"
+}
+```
+
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `type` | string | 是 | `report`（举报）/ `feedback`（意见） |
+| `category` | string | 是 | 类别键，见下表 |
+| `content` | string | 是 | 正文，长度 10–5000 字符 |
+| `target` | string | 否 | 被举报对象；仅 `report` 适用 |
+| `contact` | string | 否 | 联系方式（邮箱或 DN42 内可达标识），便于后续核实 |
+
+**类别键**
+
+| `type` | `category` 取值 |
+| --- | --- |
+| `report` | `misconduct`（违规行为）/ `service`（服务问题）/ `dispute`（资源争议）/ `other`（其他） |
+| `feedback` | `website`（网站建议）/ `service`（服务建议）/ `policy`（政策建议）/ `other`（其他） |
+
+**响应 202 Accepted**
+
+```json
+{
+  "id": "sub-20261012-d4e5f6",
+  "type": "report",
+  "status": "received"
+}
+```
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `id` | string | 受理编号，用于查询与追溯 |
+| `type` | string | 回显类型 |
+| `status` | string | 固定为 `received`（已接收） |
+
+**错误**
+
+- `400 VALIDATION_ERROR`：字段缺失或格式错误（如 `content` 不足 10 字符）
+- `429 RATE_LIMITED`：请求过于频繁
+
+> 前端将 **网络失败 / 404 / 405 / 5xx** 统一识别为“受理服务尚未上线”并优雅降级，
+> 不向用户抛出裸错误。
+
+**隐私与留档说明**
+
+- `contact` 字段在留档日志中以脱敏形式记录，仅用于本事项的核实与反馈
+- 举报人信息严格保密；日志默认写入 `/dev/null`，可在后端配置为持久化存储
+- 留档保留期限由部署方决定；本契约不强制要求查询接口
+
 ## 后端实现建议
 
 - **同源部署（推荐）**：前端静态托管后，`/api/v1` 由反向代理转发至后端服务，避免 CORS；
@@ -155,9 +221,11 @@ GET /api/v1/subdomains/{id}
 - **生效方式**：审核通过后向 DN42 Registry 提交 zone delegation（参见官方 Wiki 的 DNS 章节）
 - **数据落地**：建议记录申请时间、来源 IP（限频与审计用）与审核状态流转
 - **审核流**：v1 采用人工审核；后续可增加自动化预检（保留字、格式、归属地校验）
+- **举报/意见留档**：写入日志文件（默认 `/dev/null`，可配置为数据库或对象存储）；
+  建议 `contact` 字段脱敏后存储；留档仅供改进与审计参考，不对外公开
 
 ## 变更记录
 
 | 日期 | 说明 |
 | --- | --- |
-| 2026-10-12 | 初版契约草案发布 |
+| 2026-10-12 | 初版契约草案发布；新增举报与意见箱提交接口（`POST /api/v1/submissions`） |

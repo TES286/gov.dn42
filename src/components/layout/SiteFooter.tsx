@@ -45,10 +45,13 @@ export function SiteFooter() {
               <Link to='/services/subdomain'>{t('nav.subdomain')}</Link>
             </li>
             <li>
-              <Link to='/faq'>{t('nav.faq')}</Link>
+              <Link to='/report'>{t('report.title')}</Link>
             </li>
             <li>
-              <Link to='/contact'>{t('nav.contact')}</Link>
+              <Link to='/feedback'>{t('feedback.title')}</Link>
+            </li>
+            <li>
+              <Link to='/faq'>{t('nav.faq')}</Link>
             </li>
             <li>
               <Link to='/legal'>{t('topbar.legal')}</Link>

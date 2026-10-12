@@ -97,3 +97,35 @@ export const subdomainApi = {
       body: JSON.stringify(payload),
     }),
 };
+
+/* ============================================================
+   举报与意见箱提交接口
+   举报与意见均写入后端日志留档（详见 docs/api.md）。
+   ============================================================ */
+
+export type SubmissionType = 'report' | 'feedback';
+
+export interface SubmissionPayload {
+  type: SubmissionType;
+  category: string;
+  content: string;
+  target?: string;
+  contact?: string;
+}
+
+export interface SubmissionReceipt {
+  id: string;
+  type: SubmissionType;
+  status: 'received';
+}
+
+/** 举报 / 意见箱服务接口 */
+export const submissionsApi = {
+  /** 提交举报或意见 */
+  submit: (payload: SubmissionPayload) =>
+    request<SubmissionReceipt>('/submissions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }),
+};
