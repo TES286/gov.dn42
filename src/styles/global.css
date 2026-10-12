@@ -29,10 +29,8 @@
   --c-line: #dfe5eb;
 
   /* 字体 */
-  --font-serif: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', 'STSong',
-    'SimSun', serif;
-  --font-sans: 'Noto Sans SC', 'Source Han Sans SC', 'PingFang SC',
-    'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
+  --font-serif: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', 'STSong', 'SimSun', serif;
+  --font-sans: 'Noto Sans SC', 'Source Han Sans SC', 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
 
   /* 版式 */
   --container: 1120px;
@@ -286,7 +284,9 @@ code {
   font-size: 15.5px;
   letter-spacing: 0.04em;
   border-bottom: 3px solid transparent;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .site-nav__list a:hover {
@@ -323,7 +323,10 @@ code {
   opacity: 0;
   visibility: hidden;
   transform: translateY(6px);
-  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease,
+    visibility 0.15s;
 }
 
 .site-nav .sub a {
@@ -522,8 +525,11 @@ code {
   font-size: 15.5px;
   letter-spacing: 0.06em;
   cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease,
-    transform 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .btn:hover {
@@ -662,7 +668,10 @@ code {
   border-radius: var(--radius);
   box-shadow: var(--shadow-card);
   color: inherit;
-  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
 }
 
 a.card:hover {
@@ -963,7 +972,9 @@ table.table {
   font-family: inherit;
   font-size: 15.5px;
   color: var(--c-ink-900);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .form-field textarea {
@@ -1655,5 +1666,3 @@ table.table {
     box-shadow: none;
   }
 }
-
-

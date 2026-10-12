@@ -1,20 +1,20 @@
-export type ServiceStatus = 'available' | 'guide' | 'planned'
+export type ServiceStatus = 'available' | 'guide' | 'planned';
 
 export interface ServiceItem {
-  name: string
-  desc: string
-  status: ServiceStatus
+  name: string;
+  desc: string;
+  status: ServiceStatus;
   /** 站内路由 */
-  to?: string
+  to?: string;
   /** 站外链接 */
-  href?: string
+  href?: string;
 }
 
 export const STATUS_META: Record<ServiceStatus, { label: string; className: string }> = {
   available: { label: '可办理', className: 'tag--ok' },
   guide: { label: '办事指引', className: 'tag--info' },
   planned: { label: '建设中', className: 'tag--plan' },
-}
+};
 
 /** 公民服务目录 */
 export const services: ServiceItem[] = [
@@ -52,4 +52,4 @@ export const services: ServiceItem[] = [
     desc: '就网络资源争议在线提交调解申请。',
     status: 'planned',
   },
-]
+];

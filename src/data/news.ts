@@ -1,12 +1,12 @@
 export interface NewsItem {
-  slug: string
-  date: string
-  org: string
-  title: string
-  summary: string
+  slug: string;
+  date: string;
+  org: string;
+  title: string;
+  summary: string;
   /** 正文是否已发布；未发布时仅展示摘要 */
-  published: boolean
-  body?: string[]
+  published: boolean;
+  body?: string[];
 }
 
 /** 新闻公告数据 */
@@ -16,8 +16,7 @@ export const newsItems: NewsItem[] = [
     date: '2026-10-10',
     org: '办公厅',
     title: '关于政府门户网站上线试运行的公告',
-    summary:
-      'DN42 联合自治政府门户网站正式上线试运行，子域名注册等在线服务将陆续开放。',
+    summary: 'DN42 联合自治政府门户网站正式上线试运行，子域名注册等在线服务将陆续开放。',
     published: true,
     body: [
       '为进一步推进 DN42 网络社区的公共治理实践，提升政务信息公开与公共服务水平，"DN42 联合自治政府"门户网站（gov.dn42）已于 2026 年 10 月 10 日起上线试运行。',
@@ -31,8 +30,7 @@ export const newsItems: NewsItem[] = [
     date: '2026-09-28',
     org: '网络资源管理局',
     title: '《子域名分配管理办法（试行）》公开征求意见',
-    summary:
-      '为规范 .dn42 子域名资源的分配与使用，现就管理办法（试行）向全体公民公开征求意见。',
+    summary: '为规范 .dn42 子域名资源的分配与使用，现就管理办法（试行）向全体公民公开征求意见。',
     published: true,
     body: [
       '为规范 .dn42 子域名资源的分配与使用秩序，保障网络公民的合法权益，网络资源管理局起草了《子域名分配管理办法（试行）》（征求意见稿），现向社会公开征求意见。',
@@ -46,8 +44,7 @@ export const newsItems: NewsItem[] = [
     date: '2026-09-15',
     org: '网络资源管理局',
     title: '关于开展第三季度网络资源普查的通知',
-    summary:
-      '定于 9 月 20 日至 10 月 20 日开展第三季度网络资源普查工作，全面摸排 ASN 与地址段使用情况。',
+    summary: '定于 9 月 20 日至 10 月 20 日开展第三季度网络资源普查工作，全面摸排 ASN 与地址段使用情况。',
     published: false,
   },
-]
+];

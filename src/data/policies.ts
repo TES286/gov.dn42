@@ -1,18 +1,18 @@
-export type PolicyStatus = 'active' | 'consultation' | 'drafting'
+export type PolicyStatus = 'active' | 'consultation' | 'drafting';
 
 export interface PolicyDoc {
-  title: string
-  org: string
-  date: string
-  status: PolicyStatus
-  summary: string
+  title: string;
+  org: string;
+  date: string;
+  status: PolicyStatus;
+  summary: string;
 }
 
 export const POLICY_STATUS_META: Record<PolicyStatus, { label: string; className: string }> = {
   active: { label: '现行有效', className: 'tag--ok' },
   consultation: { label: '征求意见中', className: 'tag--info' },
   drafting: { label: '起草中', className: 'tag--plan' },
-}
+};
 
 /** 政策法规文件目录 */
 export const policies: PolicyDoc[] = [
@@ -28,8 +28,7 @@ export const policies: PolicyDoc[] = [
     org: '网络资源管理局',
     date: '2026-09-28',
     status: 'consultation',
-    summary:
-      '规范 .dn42 子域名资源的分配、使用、回收与争议处理，征求意见截止 2026 年 10 月 31 日。',
+    summary: '规范 .dn42 子域名资源的分配、使用、回收与争议处理，征求意见截止 2026 年 10 月 31 日。',
   },
   {
     title: '《政府信息公开办法》',
@@ -45,4 +44,4 @@ export const policies: PolicyDoc[] = [
     status: 'drafting',
     summary: '规定资源争议调解的申请受理、调解程序、协议效力与执行跟进等事项。',
   },
-]
+];

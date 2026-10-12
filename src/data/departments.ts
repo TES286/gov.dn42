@@ -1,6 +1,6 @@
 export interface Department {
-  name: string
-  duty: string
+  name: string;
+  duty: string;
 }
 
 /** 政府组成部门（虚构设定） */
@@ -26,4 +26,4 @@ export const departments: Department[] = [
     name: '资源与纠纷调解委员会',
     duty: '受理网络资源争议，组织调解与仲裁，维护资源分配秩序。',
   },
-]
+];
