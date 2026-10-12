@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router-dom';
 import { Layout } from './components/layout/Layout';
 import AboutPage from './pages/AboutPage';
+import AdminPage from './pages/AdminPage';
 import AuthCallbackPage from './pages/AuthCallbackPage';
 import ContactPage from './pages/ContactPage';
 import FaqPage from './pages/FaqPage';
@@ -26,6 +27,7 @@ export default function App() {
         <Route path='/services' element={<ServicesPage />} />
         <Route path='/services/subdomain' element={<SubdomainRegisterPage />} />
         <Route path='/auth/callback' element={<AuthCallbackPage />} />
+        <Route path='/admin' element={<AdminPage />} />
         <Route path='/policy' element={<PolicyPage />} />
         <Route path='/faq' element={<FaqPage />} />
         <Route path='/contact' element={<ContactPage />} />

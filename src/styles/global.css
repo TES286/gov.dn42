@@ -1685,3 +1685,79 @@ code {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ============================================================
+   管理员审批页
+   ============================================================ */
+.admin-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--c-border);
+}
+
+.admin-tab {
+  padding: 8px 16px;
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: 0;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--c-link);
+  cursor: pointer;
+}
+
+.admin-tab:hover {
+  background: var(--c-canvas);
+}
+
+.admin-tab.is-active {
+  border-color: var(--c-text);
+  background: var(--c-paper);
+  color: var(--c-text);
+}
+
+.admin-refresh {
+  margin-left: auto;
+}
+
+.admin-table {
+  font-size: 0.9rem;
+}
+
+.admin-table td {
+  vertical-align: top;
+}
+
+.admin-table th {
+  white-space: nowrap;
+}
+
+.record-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.record-list li {
+  margin-bottom: 2px;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  word-break: break-all;
+}
+
+.admin-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.btn--sm {
+  padding: 6px 12px 5px;
+  font-size: 0.9rem;
+}
