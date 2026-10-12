@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
+import { useI18n } from '../i18n';
 import { Breadcrumb } from '../components/layout/Breadcrumb';
 import { ApiError, isServiceUnavailable, subdomainApi } from '../lib/api';
 import { usePageTitle } from '../lib/usePageTitle';
@@ -22,35 +23,29 @@ type SubmitState =
 /** 命名规则：小写字母/数字，连字符不得出现在首尾，长度 2-63 */
 const NAME_PATTERN = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/;
 
-const PURPOSE_OPTIONS = ['个人主页', '项目站点', '网络服务', '其他'];
+const PURPOSE_OPTIONS = [
+  { value: 'personal', labelKey: 'subdomain.purposePersonal' },
+  { value: 'project', labelKey: 'subdomain.purposeProject' },
+  { value: 'service', labelKey: 'subdomain.purposeService' },
+  { value: 'other', labelKey: 'subdomain.purposeOther' },
+] as const;
 
-function validateName(raw: string): string | null {
-  const name = raw.trim().toLowerCase();
-  if (!name) return '请输入所需的子域名名称。';
-  if (name.length < 2) return '子域名长度不得少于 2 个字符。';
-  if (!NAME_PATTERN.test(name)) {
-    return '仅允许小写字母、数字与连字符，且须以字母或数字开头、结尾。';
-  }
-  return null;
-}
-
-/** IPv4 粗校验（严格校验由后端完成） */
 function isValidIPv4(raw: string): boolean {
   const parts = raw.split('.');
   if (parts.length !== 4) return false;
   return parts.every((part) => /^\d{1,3}$/.test(part) && Number(part) <= 255);
 }
 
-/** IPv6 粗校验：仅允许十六进制字符与冒号（严格校验由后端完成） */
 function isValidIPv6(raw: string): boolean {
   return /^[0-9a-f:]{2,45}$/i.test(raw) && raw.includes(':');
 }
 
 export default function SubdomainRegisterPage() {
-  usePageTitle('子域名注册');
+  const { t } = useI18n();
+  usePageTitle(t('subdomain.title'));
 
   const [name, setName] = useState('');
-  const [purpose, setPurpose] = useState(PURPOSE_OPTIONS[0]);
+  const [purpose, setPurpose] = useState<string>(PURPOSE_OPTIONS[0].value);
   const [ipv4, setIpv4] = useState('');
   const [ipv6, setIpv6] = useState('');
   const [contact, setContact] = useState('');
@@ -60,6 +55,16 @@ export default function SubdomainRegisterPage() {
   const [nameError, setNameError] = useState<string | null>(null);
   const [availability, setAvailability] = useState<AvailabilityState>({ kind: 'idle' });
   const [submit, setSubmit] = useState<SubmitState>({ kind: 'idle' });
+
+  const validateName = (raw: string): string | null => {
+    const candidate = raw.trim().toLowerCase();
+    if (!candidate) return t('subdomain.errNameEmpty');
+    if (candidate.length < 2) return t('subdomain.errNameShort');
+    if (!NAME_PATTERN.test(candidate)) {
+      return t('subdomain.errNameFormat');
+    }
+    return null;
+  };
 
   const handleCheck = async () => {
     const error = validateName(name);
@@ -71,21 +76,21 @@ export default function SubdomainRegisterPage() {
     try {
       const result = await subdomainApi.availability(candidate);
       if (result.available) {
-        setAvailability({ kind: 'ok', message: `“${candidate}.dn42”当前可申请。` });
+        setAvailability({ kind: 'ok', message: `“${candidate}.dn42” ${t('subdomain.availOk')}` });
       } else {
         setAvailability({
           kind: 'bad',
-          message: result.reason ?? `“${candidate}.dn42”已被占用或属于保留字。`,
+          message: `“${candidate}.dn42” ${t('subdomain.availBad')}`,
         });
       }
     } catch (err) {
       setAvailability({
         kind: 'info',
         message: isServiceUnavailable(err)
-          ? '注册服务尚未上线，暂时无法查询可用性；接口契约已发布，等待后端部署。'
+          ? t('subdomain.availOffline')
           : err instanceof ApiError
             ? err.message
-            : '查询失败，请稍后重试。',
+            : t('subdomain.availFail'),
       });
     }
   };
@@ -98,23 +103,23 @@ export default function SubdomainRegisterPage() {
     if (error) return;
 
     if (!contact.trim()) {
-      setSubmit({ kind: 'error', title: '请填写联系邮箱，以便接收审核结果。' });
+      setSubmit({ kind: 'error', title: t('subdomain.errContact') });
       return;
     }
     if (ipv4.trim() && !isValidIPv4(ipv4.trim())) {
-      setSubmit({ kind: 'error', title: 'IPv4 指向地址格式不正确。' });
+      setSubmit({ kind: 'error', title: t('subdomain.errIpv4') });
       return;
     }
     if (ipv6.trim() && !isValidIPv6(ipv6.trim())) {
-      setSubmit({ kind: 'error', title: 'IPv6 指向地址格式不正确。' });
+      setSubmit({ kind: 'error', title: t('subdomain.errIpv6') });
       return;
     }
     if (!ipv4.trim() && !ipv6.trim()) {
-      setSubmit({ kind: 'error', title: '请至少填写一个指向地址（IPv4 或 IPv6）。' });
+      setSubmit({ kind: 'error', title: t('subdomain.errNoAddr') });
       return;
     }
     if (!agree) {
-      setSubmit({ kind: 'error', title: '请先阅读并同意《子域名分配管理办法（试行）》。' });
+      setSubmit({ kind: 'error', title: t('subdomain.errAgree') });
       return;
     }
 
@@ -136,7 +141,7 @@ export default function SubdomainRegisterPage() {
       } else if (err instanceof ApiError) {
         setSubmit({ kind: 'error', title: err.message });
       } else {
-        setSubmit({ kind: 'error', title: '提交失败，请稍后重试。' });
+        setSubmit({ kind: 'error', title: t('subdomain.submitErrGeneric') });
       }
     }
   };
@@ -145,43 +150,43 @@ export default function SubdomainRegisterPage() {
     <>
       <div className='page-head'>
         <div className='container'>
-          <Breadcrumb items={[{ label: '公民服务', to: '/services' }, { label: '子域名注册' }]} />
-          <h1>子域名注册</h1>
-          <p className='page-head__sub'>免费申请专属 .dn42 子域名，并将其解析至您在 DN42 网络中的资源。</p>
+          <Breadcrumb items={[{ label: t('nav.services'), to: '/services' }, { label: t('subdomain.title') }]} />
+          <h1>{t('subdomain.title')}</h1>
+          <p className='page-head__sub'>{t('subdomain.sub')}</p>
         </div>
       </div>
 
       <div className='container page-body'>
         <section className='about-section' aria-labelledby='subdomain-guide'>
           <h2 className='section-title' id='subdomain-guide'>
-            办理流程
+            {t('subdomain.guideTitle')}
           </h2>
           <ol className='steps'>
             <li>
-              <strong>提交申请</strong>
-              在线填写申请表单，确认命名与指向信息无误后提交。
+              <strong>{t('subdomain.step1Title')}</strong>
+              {t('subdomain.step1Desc')}
             </li>
             <li>
-              <strong>人工审核</strong>
-              网络资源管理局将核查命名规范与资源归属，审核结果发送至联系邮箱。
+              <strong>{t('subdomain.step2Title')}</strong>
+              {t('subdomain.step2Desc')}
             </li>
             <li>
-              <strong>解析生效</strong>
-              审核通过后，子域名将登记至政府域名并完成解析，通常在一个工作日内生效。
+              <strong>{t('subdomain.step3Title')}</strong>
+              {t('subdomain.step3Desc')}
             </li>
           </ol>
         </section>
 
         <section className='about-section' aria-labelledby='subdomain-form'>
           <h2 className='section-title' id='subdomain-form'>
-            在线申请
+            {t('subdomain.formTitle')}
           </h2>
 
           <form className='form-panel' onSubmit={handleSubmit} noValidate>
             <div className='form-grid'>
               <div className={`form-field form-field--full${nameError ? ' has-error' : ''}`}>
                 <label htmlFor='sub-name'>
-                  所需子域名
+                  {t('subdomain.nameLabel')}
                   <span className='req' aria-hidden='true'>
                     *
                   </span>
@@ -192,15 +197,15 @@ export default function SubdomainRegisterPage() {
                     type='text'
                     value={name}
                     onChange={(event) => setName(event.target.value)}
-                    placeholder='例如：home'
+                    placeholder={t('subdomain.namePlaceholder')}
                     autoComplete='off'
                     aria-describedby='sub-name-hint'
                   />
                   <span className='suffix' aria-hidden='true'>
-                    .dn42
+                    {t('subdomain.suffix')}
                   </span>
                   <button type='button' className='btn btn--outline' onClick={handleCheck} disabled={availability.kind === 'checking'}>
-                    {availability.kind === 'checking' ? '查询中…' : '查询可用性'}
+                    {availability.kind === 'checking' ? t('subdomain.checking') : t('subdomain.checkAvail')}
                   </button>
                 </div>
                 {nameError ? (
@@ -209,22 +214,22 @@ export default function SubdomainRegisterPage() {
                   </p>
                 ) : (
                   <p className='form-hint' id='sub-name-hint'>
-                    仅限小写字母、数字与连字符；www、gov、mail 等属于保留字。
+                    {t('subdomain.nameHint')}
                   </p>
                 )}
                 {availability.kind !== 'idle' && (
                   <p className={`avail-status avail-status--${availability.kind === 'ok' ? 'ok' : availability.kind === 'bad' ? 'bad' : 'info'}`} role='status'>
-                    {availability.kind === 'checking' ? '正在连接注册服务查询……' : availability.message}
+                    {availability.kind === 'checking' ? t('subdomain.checkingMsg') : availability.message}
                   </p>
                 )}
               </div>
 
               <div className='form-field'>
-                <label htmlFor='sub-purpose'>域名用途</label>
+                <label htmlFor='sub-purpose'>{t('subdomain.purposeLabel')}</label>
                 <select id='sub-purpose' value={purpose} onChange={(event) => setPurpose(event.target.value)}>
                   {PURPOSE_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
+                    <option key={option.value} value={option.value}>
+                      {t(option.labelKey)}
                     </option>
                   ))}
                 </select>
@@ -232,7 +237,7 @@ export default function SubdomainRegisterPage() {
 
               <div className='form-field'>
                 <label htmlFor='sub-contact'>
-                  联系邮箱
+                  {t('subdomain.contactLabel')}
                   <span className='req' aria-hidden='true'>
                     *
                   </span>
@@ -242,44 +247,44 @@ export default function SubdomainRegisterPage() {
                   type='email'
                   value={contact}
                   onChange={(event) => setContact(event.target.value)}
-                  placeholder='用于接收审核结果'
+                  placeholder={t('subdomain.contactPlaceholder')}
                   autoComplete='email'
                 />
               </div>
 
               <div className='form-field'>
-                <label htmlFor='sub-ipv4'>IPv4 指向地址</label>
+                <label htmlFor='sub-ipv4'>{t('subdomain.ipv4Label')}</label>
                 <input
                   id='sub-ipv4'
                   type='text'
                   value={ipv4}
                   onChange={(event) => setIpv4(event.target.value)}
-                  placeholder='例如：172.20.0.1'
+                  placeholder={t('subdomain.ipv4Placeholder')}
                   autoComplete='off'
                   inputMode='numeric'
                 />
-                <span className='form-hint'>IPv4 与 IPv6 至少填写一项</span>
+                <span className='form-hint'>{t('subdomain.ipvHint')}</span>
               </div>
 
               <div className='form-field'>
-                <label htmlFor='sub-ipv6'>IPv6 指向地址</label>
+                <label htmlFor='sub-ipv6'>{t('subdomain.ipv6Label')}</label>
                 <input
                   id='sub-ipv6'
                   type='text'
                   value={ipv6}
                   onChange={(event) => setIpv6(event.target.value)}
-                  placeholder='例如：fd42::1'
+                  placeholder={t('subdomain.ipv6Placeholder')}
                   autoComplete='off'
                 />
               </div>
 
               <div className='form-field form-field--full'>
-                <label htmlFor='sub-note'>补充说明</label>
+                <label htmlFor='sub-note'>{t('subdomain.noteLabel')}</label>
                 <textarea
                   id='sub-note'
                   value={note}
                   onChange={(event) => setNote(event.target.value)}
-                  placeholder='选填：可补充说明用途、所属网络或其他需要审核人员了解的信息。'
+                  placeholder={t('subdomain.notePlaceholder')}
                   rows={4}
                 />
               </div>
@@ -288,27 +293,30 @@ export default function SubdomainRegisterPage() {
                 <label className='form-check'>
                   <input type='checkbox' checked={agree} onChange={(event) => setAgree(event.target.checked)} />
                   <span>
-                    我已阅读并同意
-                    <Link to='/policy'>《子域名分配管理办法（试行）》</Link>
-                    ，承诺所填信息真实有效，且不将子域名用于违反社区规则或法律的用途。
+                    {t('subdomain.agreeText')}
+                    <Link to='/policy'>{t('subdomain.agreePolicy')}</Link>
+                    {t('subdomain.agreeSuffix')}
                   </span>
                 </label>
               </div>
 
               <div className='form-actions'>
                 <button type='submit' className='btn btn--primary' disabled={submit.kind === 'submitting'}>
-                  {submit.kind === 'submitting' ? '正在提交…' : '提交申请'}
+                  {submit.kind === 'submitting' ? t('subdomain.submitting') : t('subdomain.submit')}
                 </button>
-                <span className='form-hint'>提交即视为同意上述管理办法与服务条款。</span>
+                <span className='form-hint'>{t('subdomain.submitHint')}</span>
               </div>
             </div>
 
             {submit.kind === 'success' && (
               <div className='form-status form-status--ok' role='status'>
                 <p>
-                  <strong>申请已受理。</strong>受理编号：<code>{submit.id}</code>， 申请子域名：<code>{submit.name}.dn42</code>。
+                  <strong>{t('subdomain.submitOkTitle')}</strong>
+                  {t('subdomain.receiptId')}
+                  <code>{submit.id}</code>，{t('subdomain.receiptName')}
+                  <code>{submit.name}.dn42</code>。
                 </p>
-                <p>审核结果将在 5 个工作日内发送至您的联系邮箱（虚拟工作时间）。</p>
+                <p>{t('subdomain.submitOkBody')}</p>
               </div>
             )}
 
@@ -321,19 +329,10 @@ export default function SubdomainRegisterPage() {
             {submit.kind === 'offline' && (
               <div className='form-status form-status--warn' role='status'>
                 <p>
-                  <strong>注册服务正在部署中。</strong>
-                  您填写的内容本次未能发送——后端注册接口尚未上线。
+                  <strong>{t('subdomain.submitOfflineTitle')}</strong>
+                  {t('subdomain.submitOfflineBody')}
                 </p>
-                <p>
-                  前端已按接口契约完成对接，待后端部署后本表单即可正常提交。 接口规范详见
-                  {/* <a
-                    href="https://github.com/TES286/gov.dn42/blob/master/docs/api.md"
-                    target="_blank"
-                    rel="noreferrer"
-                  > */}
-                  docs/api.md
-                  {/*</a>*/}。
-                </p>
+                <p>{t('subdomain.submitOfflineNote')}</p>
               </div>
             )}
           </form>
@@ -341,14 +340,10 @@ export default function SubdomainRegisterPage() {
 
         <section className='about-section' aria-labelledby='subdomain-rules'>
           <h2 className='section-title' id='subdomain-rules'>
-            命名规则
+            {t('subdomain.rulesTitle')}
           </h2>
           <div className='callout'>
-            <p>
-              <strong>基本规则：</strong>
-              子域名长度为 2-63 个字符，仅允许小写字母、数字与连字符，且须以字母或数字开头、结尾； 先到先得、免费分配；单个公民同一时期可持有的子域名数量上限为
-              5 个； www、gov、mail、ns、api 等基础设施相关名称属于保留字，不予分配。
-            </p>
+            <p>{t('subdomain.rulesBody')}</p>
           </div>
         </section>
       </div>

@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom';
+import { useI18n } from '../../i18n';
 import { Crest } from '../brand/Crest';
 
 /** 页脚：栏目导航 + 相关站点 + 版权与虚构声明 */
 export function SiteFooter() {
+  const { t } = useI18n();
   const year = new Date().getFullYear();
 
   return (
@@ -15,71 +17,66 @@ export function SiteFooter() {
               gov<span className='tld'>.dn42</span>
             </span>
           </div>
-          <p className='site-footer__desc'>DN42 联合自治政府官方门户网站，面向全体网络公民提供政务信息公开与在线公共服务。</p>
+          <p className='site-footer__desc'>{t('footer.desc')}</p>
         </div>
 
-        <nav aria-label='页脚导航：网站栏目'>
-          <h4>网站栏目</h4>
+        <nav aria-label={t('footer.colSections')}>
+          <h4>{t('footer.colSections')}</h4>
           <ul>
             <li>
-              <Link to='/about'>关于政府</Link>
+              <Link to='/about'>{t('nav.about')}</Link>
             </li>
             <li>
-              <Link to='/news'>新闻公告</Link>
+              <Link to='/news'>{t('nav.news')}</Link>
             </li>
             <li>
-              <Link to='/services'>公民服务</Link>
+              <Link to='/services'>{t('nav.services')}</Link>
             </li>
             <li>
-              <Link to='/policy'>政务公开</Link>
+              <Link to='/policy'>{t('nav.policy')}</Link>
             </li>
           </ul>
         </nav>
 
-        <nav aria-label='页脚导航：公共服务'>
-          <h4>公共服务</h4>
+        <nav aria-label={t('footer.colServices')}>
+          <h4>{t('footer.colServices')}</h4>
           <ul>
             <li>
-              <Link to='/services/subdomain'>子域名注册</Link>
+              <Link to='/services/subdomain'>{t('nav.subdomain')}</Link>
             </li>
             <li>
-              <Link to='/faq'>常见问题</Link>
+              <Link to='/faq'>{t('nav.faq')}</Link>
             </li>
             <li>
-              <Link to='/contact'>联系我们</Link>
+              <Link to='/contact'>{t('nav.contact')}</Link>
             </li>
             <li>
-              <Link to='/legal'>法律声明</Link>
+              <Link to='/legal'>{t('topbar.legal')}</Link>
             </li>
           </ul>
         </nav>
 
-        <nav aria-label='页脚导航：相关站点'>
-          <h4>相关站点</h4>
+        <nav aria-label={t('footer.colRelated')}>
+          <h4>{t('footer.colRelated')}</h4>
           <ul>
             <li>
               <a href='https://dn42.dev' target='_blank' rel='noreferrer'>
-                DN42 官方 Wiki
+                {t('footer.relatedWiki')}
               </a>
             </li>
             <li>
               <a href='https://git.dn42.dev/dn42/registry' target='_blank' rel='noreferrer'>
-                DN42 Registry
+                {t('footer.relatedRegistry')}
               </a>
             </li>
-            {/*<li>
-              <a href="https://github.com/TES286/gov.dn42" target="_blank" rel="noreferrer">
-                源代码仓库
-              </a>
-            </li>*/}
           </ul>
         </nav>
       </div>
 
       <div className='site-footer__bottom'>
         <div className='container'>
-          <p>© {year} DN42 联合自治政府门户网站 · 保留所有权利</p>
-          <p className='site-footer__fiction'>本网站为 DN42 网络社区的虚构项目，与任何现实国家、地区或组织的政府机构无关。</p>
+          <p>{t('footer.copyright').replace('{year}', String(year))}</p>
+          <p className='site-footer__fiction'>{t('footer.fiction')}</p>
         </div>
       </div>
     </footer>

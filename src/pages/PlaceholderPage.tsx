@@ -1,4 +1,5 @@
 import { Breadcrumb, type Crumb } from '../components/layout/Breadcrumb';
+import { useI18n } from '../i18n';
 import { usePageTitle } from '../lib/usePageTitle';
 
 interface PlaceholderPageProps {
@@ -9,6 +10,7 @@ interface PlaceholderPageProps {
 
 /** 框架阶段占位页：后续按栏目逐一充实 */
 export function PlaceholderPage({ title, crumbs, note }: PlaceholderPageProps) {
+  const { t } = useI18n();
   usePageTitle(title);
 
   return (
@@ -20,8 +22,8 @@ export function PlaceholderPage({ title, crumbs, note }: PlaceholderPageProps) {
         </div>
       </div>
       <div className='container placeholder'>
-        <h2>栏目建设中</h2>
-        <p>{note ?? '本栏目内容正在整理，即将上线。'}</p>
+        <h2>{t('placeholder.building')}</h2>
+        <p>{note ?? t('placeholder.defaultNote')}</p>
       </div>
     </>
   );

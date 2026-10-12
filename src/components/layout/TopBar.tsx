@@ -1,17 +1,26 @@
 import { Link } from 'react-router-dom';
+import { useI18n } from '../../i18n';
 
-/** 顶部功能条 */
+/** 顶部功能条：站点标识 + 快捷链接 + 语言切换 */
 export function TopBar() {
+  const { t, locale, setLocale } = useI18n();
+
   return (
     <div className='topbar'>
       <div className='container topbar__inner'>
-        <span className='topbar__note'>United Autonomous Government of DN42 · DN42 联合自治政府</span>
+        <span className='topbar__note'>{t('topbar.note')}</span>
         <div className='topbar__links'>
-          <Link to='/legal'>法律声明</Link>
-          <Link to='/contact'>联系我们</Link>
-          <span className='topbar__lang' title='多语言支持规划中'>
-            中文
-          </span>
+          <Link to='/legal'>{t('topbar.legal')}</Link>
+          <Link to='/contact'>{t('topbar.contact')}</Link>
+          <button
+            type='button'
+            className='topbar__lang topbar__lang--link'
+            onClick={() => setLocale(locale === 'zh' ? 'en' : 'zh')}
+            aria-label={locale === 'zh' ? t('common.langSwitch') : t('common.langName')}
+            lang={locale === 'zh' ? 'en' : 'zh-CN'}
+          >
+            {t('common.langSwitch')}
+          </button>
         </div>
       </div>
     </div>

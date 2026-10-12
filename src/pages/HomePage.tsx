@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useI18n } from '../i18n';
 import { ServiceCard } from '../components/ui/ServiceCard';
 import { departments } from '../data/departments';
 import { newsItems } from '../data/news';
@@ -6,6 +7,8 @@ import { services } from '../data/services';
 import { usePageTitle } from '../lib/usePageTitle';
 
 function NewsPreview() {
+  const { pick } = useI18n();
+
   return (
     <div className='news-list'>
       {newsItems.slice(0, 3).map((item) => {
@@ -13,10 +16,10 @@ function NewsPreview() {
           <>
             <span className='news-item__date'>{item.date}</span>
             <span>
-              <span className='news-item__title'>{item.title}</span>
-              <span className='news-item__summary'>{item.summary}</span>
+              <span className='news-item__title'>{pick(item.title)}</span>
+              <span className='news-item__summary'>{pick(item.summary)}</span>
             </span>
-            <span className='news-item__org'>{item.org}</span>
+            <span className='news-item__org'>{pick(item.org)}</span>
           </>
         );
         return item.published ? (
@@ -34,21 +37,22 @@ function NewsPreview() {
 }
 
 export default function HomePage() {
+  const { t, pick } = useI18n();
   usePageTitle();
 
   return (
     <>
       <section className='hero'>
         <div className='container hero__inner'>
-          <p className='hero__kicker'>DN42 UNITED AUTONOMOUS GOVERNMENT</p>
-          <h1>欢迎访问 DN42 联合自治政府门户网站</h1>
-          <p className='hero__lead'>面向全体 DN42 网络公民，提供政务信息公开、政策文件查询与在线公共服务，与您携手共建互联、开放、稳定的网络空间。</p>
+          <p className='hero__kicker'>{t('home.kicker')}</p>
+          <h1>{t('home.title')}</h1>
+          <p className='hero__lead'>{t('home.lead')}</p>
           <div className='hero__actions'>
             <Link className='btn btn--gold' to='/services'>
-              服务办理
+              {t('home.ctaServices')}
             </Link>
             <Link className='btn btn--ghost' to='/about'>
-              了解政府组织
+              {t('home.ctaAbout')}
             </Link>
           </div>
         </div>
@@ -58,16 +62,16 @@ export default function HomePage() {
         <div className='container'>
           <div className='section-head'>
             <h2 className='section-title' id='home-services'>
-              公民服务
-              <span className='section-title__sub'>便捷、透明的在线政务服务</span>
+              {t('home.servicesTitle')}
+              <span className='section-title__sub'>{t('home.servicesSub')}</span>
             </h2>
             <Link className='section-more' to='/services'>
-              全部服务 →
+              {t('home.viewAll')}
             </Link>
           </div>
           <div className='card-grid'>
             {services.slice(0, 4).map((service) => (
-              <ServiceCard key={service.name} service={service} />
+              <ServiceCard key={pick(service.name)} service={service} />
             ))}
           </div>
         </div>
@@ -77,11 +81,11 @@ export default function HomePage() {
         <div className='container'>
           <div className='section-head'>
             <h2 className='section-title' id='home-news'>
-              新闻公告
-              <span className='section-title__sub'>政府工作动态与政策发布</span>
+              {t('home.newsTitle')}
+              <span className='section-title__sub'>{t('home.newsSub')}</span>
             </h2>
             <Link className='section-more' to='/news'>
-              更多公告 →
+              {t('home.viewMore')}
             </Link>
           </div>
           <NewsPreview />
@@ -92,18 +96,18 @@ export default function HomePage() {
         <div className='container'>
           <div className='section-head'>
             <h2 className='section-title' id='home-departments'>
-              政府组成
-              <span className='section-title__sub'>分工明确的常设机构体系</span>
+              {t('home.deptsTitle')}
+              <span className='section-title__sub'>{t('home.deptsSub')}</span>
             </h2>
             <Link className='section-more' to='/about#departments'>
-              组织架构 →
+              {t('home.viewOrg')}
             </Link>
           </div>
           <div className='card-grid card-grid--3'>
             {departments.map((dept) => (
-              <Link key={dept.name} className='card card--dept' to='/about#departments'>
-                <h3>{dept.name}</h3>
-                <p>{dept.duty}</p>
+              <Link key={pick(dept.name)} className='card card--dept' to='/about#departments'>
+                <h3>{pick(dept.name)}</h3>
+                <p>{pick(dept.duty)}</p>
               </Link>
             ))}
           </div>
