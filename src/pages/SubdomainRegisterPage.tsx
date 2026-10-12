@@ -385,7 +385,7 @@ function SubdomainForm({ user, t }: { user: OidcUser; t: (key: string) => string
                 <strong>{t('subdomain.submitOkTitle')}</strong>
                 {t('subdomain.receiptId')}
                 <code>{submit.id}</code>，{t('subdomain.receiptName')}
-                <code>{submit.name}.dn42</code>。
+                <code>{submit.name}.gov.dn42</code>。
               </p>
               <p>{t('subdomain.submitOkBody')}</p>
             </div>

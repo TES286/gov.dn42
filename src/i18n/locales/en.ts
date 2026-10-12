@@ -100,7 +100,7 @@ export const en: typeof zh = {
   },
   subdomain: {
     title: 'Subdomain registration',
-    sub: 'Apply free of charge for your own .dn42 subdomain and have it resolve to your resources on the DN42 network.',
+    sub: 'Apply free of charge for your own .gov.dn42 subdomain and have it resolve to your resources on the DN42 network.',
     guideTitle: 'How to apply',
     step1Title: 'Submit application',
     step1Desc: 'Fill in the online form and confirm the name and target records before submitting.',
@@ -112,7 +112,7 @@ export const en: typeof zh = {
     nameLabel: 'Desired subdomain',
     nameHint: 'Lowercase letters, digits and hyphens only; www, gov, mail and similar names are reserved.',
     namePlaceholder: 'e.g. home',
-    suffix: '.dn42',
+    suffix: '.gov.dn42',
     checkAvail: 'Check availability',
     checking: 'Checking…',
     checkingMsg: 'Contacting the registration service…',

@@ -5,6 +5,7 @@ import { useI18n } from '../../i18n';
  *  阶段标签 + 一句服务说明，置于主内容之上。
  */
 export function NoticeBar() {
+  return;
   const { t } = useI18n();
 
   return (

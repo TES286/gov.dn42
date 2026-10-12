@@ -98,7 +98,7 @@ export const zh = {
   },
   subdomain: {
     title: '子域名注册',
-    sub: '免费申请专属 .dn42 子域名，并将其解析至您在 DN42 网络中的资源。',
+    sub: '免费申请专属 .gov.dn42 子域名，并将其解析至您在 DN42 网络中的资源。',
     guideTitle: '办理流程',
     step1Title: '提交申请',
     step1Desc: '在线填写申请表单，确认命名与指向信息无误后提交。',
@@ -110,7 +110,7 @@ export const zh = {
     nameLabel: '所需子域名',
     nameHint: '仅限小写字母、数字与连字符；www、gov、mail 等属于保留字。',
     namePlaceholder: '例如：home',
-    suffix: '.dn42',
+    suffix: '.gov.dn42',
     checkAvail: '查询可用性',
     checking: '查询中…',
     checkingMsg: '正在连接注册服务查询……',

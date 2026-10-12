@@ -37,7 +37,7 @@ export const OIDC_PROVIDERS: OidcProvider[] = [
     authorizationEndpoint: 'https://auth.iedon.net/authorize',
     tokenEndpoint: 'https://auth.iedon.net/token',
     issuer: 'https://auth.iedon.net',
-    displayName: 'iedon.net Auth',
+    displayName: 'OAuth.dn42',
   },
   {
     id: 'g-load',
@@ -46,7 +46,7 @@ export const OIDC_PROVIDERS: OidcProvider[] = [
     tokenEndpoint: 'https://dn42.g-load.eu/oauth2/token',
     userinfoEndpoint: 'https://dn42.g-load.eu/oauth2/userinfo',
     issuer: 'https://dn42.g-load.eu',
-    displayName: 'g-load.eu Auth',
+    displayName: 'Kioubit.dn42 Auth',
   },
   {
     id: 'hexpnet',
@@ -55,7 +55,7 @@ export const OIDC_PROVIDERS: OidcProvider[] = [
     tokenEndpoint: 'https://auth42.hexpnet.work/auth/oauth/token',
     userinfoEndpoint: 'https://auth42.hexpnet.work/auth/oauth/userinfo',
     issuer: 'https://auth42.hexpnet.work',
-    displayName: 'hexpnet.work Auth',
+    displayName: 'HExpNetwork WebAuth',
   },
 ];
 
@@ -64,8 +64,17 @@ export const OIDC_SCOPE = 'openid profile email dn42';
 
 /** client_id 通过环境变量配置（每个提供商各一个）；未配置时为空字符串 */
 function clientIdFor(providerId: string): string {
-  const key = `VITE_OIDC_CLIENT_ID_${providerId.toUpperCase().replace(/-/g, '_')}`;
-  return (import.meta.env[key] as string | undefined) ?? '';
+  //const key = `VITE_OIDC_CLIENT_ID_${providerId.toUpperCase().replace(/-/g, '_')}`;
+  //return (import.meta.env[key] as string | undefined) ?? '';
+  if (providerId === 'iedon') {
+    return '74f53c92f6039374ecc1981d59b0be70'; //ee2a2fa5da299932f7b203e5bc658d77eb1dc05fcd9d2637c8cf19e7209b3bf2
+  } else if (providerId === 'g-load') {
+    return 'cbb31e4f-af83-4df7-b362-1b50ab1c6607';
+  } else if (providerId === 'hexpnet') {
+    return 'XmR1nNxHU17snGVi'; // TOXKG2zwdCfWNRmGlGERsoEl29n2Ys0J
+  } else {
+    return '';
+  }
 }
 
 /** PKCE code_verifier：43-128 字符的 URL 安全随机串 */
