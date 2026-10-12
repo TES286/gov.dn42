@@ -3,7 +3,6 @@ import { resolve } from 'node:path'
 import react, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
 import { defineConfig, type Plugin } from 'vite'
-import { mockApiHandler } from './server/mockApi.js'
 
 /**
  * 构建后复制 index.html 为 404.html，
@@ -24,21 +23,33 @@ function spaFallback(): Plugin {
 }
 
 /**
- * Mock API 插件：dev 模式下将 /api/v1 请求转发到 mock 后端。
- * 生产构建不含此插件；mock 数据存储在内存，重启即重置。
+ * 后端 API 插件：dev 模式下将 /api/v1 转发到生产后端（server/server.ts）。
+ * 数据存储在 PostgreSQL（生产）或 pglite（开发，零安装）。
+ * 生产构建不含此插件；后端独立部署由 systemd 管理。
  */
-function mockApi(): Plugin {
+function backendApi(): Plugin {
   return {
-    name: 'mock-api',
+    name: 'backend-api',
     apply: 'serve',
     configureServer(server) {
-      server.middlewares.use((req, res, next) => {
+      let handlerPromise: Promise<(req: import('node:http').IncomingMessage, res: import('node:http').ServerResponse) => Promise<void>> | null = null
+
+      server.middlewares.use(async (req, res, next) => {
         if (!req.url?.startsWith('/api/v1')) {
           next()
           return
         }
-        // 转换为 node:http 风格的 req/res（Vite middlewares 已是 http 的实例）
-        void mockApiHandler(req, res)
+        try {
+          if (!handlerPromise) {
+            handlerPromise = import('./server/server.js').then((m) => m.createApp()).then((app) => app.handler)
+          }
+          const handler = await handlerPromise
+          await handler(req, res)
+        } catch (err) {
+          console.error('[vite] backend plugin error:', err)
+          res.writeHead(500, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ error: { code: 'INTERNAL_ERROR', message: 'backend plugin failed' } }))
+        }
       })
     },
   }
@@ -46,5 +57,5 @@ function mockApi(): Plugin {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), babel({ presets: [reactCompilerPreset()] }), mockApi(), spaFallback()],
+  plugins: [react(), babel({ presets: [reactCompilerPreset()] }), backendApi(), spaFallback()],
 })
