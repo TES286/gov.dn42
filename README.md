@@ -45,6 +45,7 @@ pnpm lint       # ESLint 代码检查
 | `/contact` | 联系我们 | 联系渠道 |
 | `/report` | 举报信箱 | 举报信投递入口（后端记录备案） |
 | `/feedback` | 意见箱 | 意见反馈入口（后端记录备案） |
+| `/admin` | 管理员审批 | 审核子域名注册申请（mock 阶段不鉴权） |
 | `/legal` | 法律声明 | 网站性质、隐私与免责声明 |
 
 ## 后端 API 预留
@@ -57,6 +58,19 @@ VITE_API_BASE=https://api.gov.dn42/v1 pnpm build
 ```
 
 后端尚未部署时，表单会以友好的提示优雅降级，不会抛出裸错误。
+
+### Mock 后端（开发用）
+
+仓库内置一份零依赖的 demo 后端（`server/mockApi.ts`），实现全部接口（1–7）+ OIDC 回调。
+数据存储在内存，重启即重置。
+
+- **开发模式**：`pnpm dev` 自动将 `/api/v1` 转发到 mock handler（见 `vite.config.ts` 的 `mockApi()` 插件），
+  无需单独启动
+- **独立运行**：`node --import tsx server/mockApi.ts`（默认监听 `:8787`，`MOCK_PORT` 可配）
+
+mock 后端对 OIDC ID token 仅解码 payload、不做签名校验——仅供开发演示，
+生产部署必须用 JWKS 校验签名。子域名采用 NS 委派：申请者提供 NS 记录，
+审批通过后由管理员向 DN42 Registry 提交 zone delegation。
 
 ### OIDC 身份认证配置
 
@@ -95,9 +109,10 @@ gov.dn42/
 
 ## 路线图
 
-- [ ] 后端：实现子域名注册 API（契约见 `docs/api.md`，进展见 Issues）
-- [ ] 后端：实现举报与意见箱提交接口（`POST /api/v1/submissions`）
-- [ ] 后端：实现 OIDC 认证回调接口（`POST /api/v1/auth/oidc/callback`）
+- [x] 后端：mock 后端（`server/mockApi.ts`，开发用）
+- [x] 审核流：管理员审批页面（`/admin`）+ 管理员端点
+- [x] 委派模式：子域名采用 NS 委派（DS 可选）
+- [ ] 后端：实现生产级后端 API（契约见 `docs/api.md`）
 - [ ] 服务：Whois 信息查询
 - [ ] 服务：网络资源纠纷调解在线申请
 - [x] 界面：英文版（i18n）
