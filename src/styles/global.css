@@ -1381,6 +1381,76 @@ table.table {
   color: #6d7f94;
 }
 
+/* ---------- 内页补充 ---------- */
+.about-section {
+  margin-bottom: 48px;
+}
+
+.about-section > .section-title {
+  margin-bottom: 18px;
+}
+
+.about-section p {
+  max-width: 860px;
+  text-align: justify;
+  color: var(--c-ink-700);
+}
+
+.text-muted {
+  color: var(--c-ink-500);
+  font-size: 14.5px;
+  margin-top: 14px;
+}
+
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0 4px 26px;
+  border-left: 2px solid var(--c-line);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 860px;
+}
+
+.timeline li {
+  position: relative;
+}
+
+.timeline li::before {
+  content: '';
+  position: absolute;
+  left: -33px;
+  top: 0.5em;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--c-gold-500);
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 2px var(--c-gold-300);
+}
+
+.timeline time {
+  display: block;
+  font-size: 13.5px;
+  color: var(--c-gold-600);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.timeline strong {
+  display: block;
+  color: var(--c-navy-900);
+  font-size: 16.5px;
+  margin: 2px 0;
+}
+
+.timeline p {
+  margin: 0;
+  color: var(--c-ink-500);
+  font-size: 14.5px;
+}
+
 /* ---------- 响应式 ---------- */
 @media (max-width: 960px) {
   .card-grid,
