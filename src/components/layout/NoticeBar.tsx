@@ -1,16 +1,18 @@
-/** 首页试运行公告条 */
+/** 阶段横幅（Phase Banner）
+ *  对齐 GOV.UK Design System 的 phase-banner 组件：
+ *  阶段标签 + 一句服务说明，置于主内容之上。
+ */
 export function NoticeBar() {
-  return;
   return (
-    <div className='notice-bar' role='note'>
-      <div className='container'>
-        <strong>公告</strong>
-        <span>
-          本门户网站于 2026 年 10 月上线试运行，在线服务正陆续开放，欢迎通过
+    <div className='phase-banner'>
+      <div className='container phase-banner__inner'>
+        <span className='phase-banner__tag'>试用版</span>
+        <span className='phase-banner__text'>
+          本门户网站为新上线服务，部分功能仍在完善中。如在使用过程中发现问题，欢迎通过
           <a href='https://github.com/TES286/gov.dn42' target='_blank' rel='noreferrer'>
             源代码仓库
           </a>
-          提出意见与建议。
+          反馈意见，帮助我们改进服务。
         </span>
       </div>
     </div>
