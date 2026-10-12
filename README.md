@@ -45,10 +45,10 @@ pnpm lint       # ESLint 代码检查
 | `/contact` | 联系我们 | 联系渠道 |
 | `/report` | 举报信箱 | 举报信投递入口（后端记录备案） |
 | `/feedback` | 意见箱 | 意见反馈入口（后端记录备案） |
-| `/admin` | 管理员审批 | 审核子域名注册申请（mock 阶段不鉴权） |
+| `/admin` | 管理员审批 | 审核子域名注册申请（仅 ASN 4242420078） |
 | `/legal` | 法律声明 | 网站性质、隐私与免责声明 |
 
-## 后端 API 预留
+## 后端 API
 
 子域名注册、举报/意见提交与 OIDC 认证等在线服务的前端已按 [`docs/api.md`](docs/api.md) 中定义的接口
 契约调用，默认指向同源 `/api/v1`，可通过环境变量覆盖：
@@ -59,31 +59,38 @@ VITE_API_BASE=https://api.gov.dn42/v1 pnpm build
 
 后端尚未部署时，表单会以友好的提示优雅降级，不会抛出裸错误。
 
-### Mock 后端（开发用）
+### 后端服务器
 
-仓库内置一份零依赖的 demo 后端（`server/mockApi.ts`），实现全部接口（1–7）+ OIDC 回调。
-数据存储在内存，重启即重置。
+`server/server.ts` 提供生产准备级后端，数据持久化到 PostgreSQL。
 
-- **开发模式**：`pnpm dev` 自动将 `/api/v1` 转发到 mock handler（见 `vite.config.ts` 的 `mockApi()` 插件），
-  无需单独启动
-- **独立运行**：`node --import tsx server/mockApi.ts`（默认监听 `:8787`，`MOCK_PORT` 可配）
+- **开发模式**：`pnpm dev` 自动将 `/api/v1` 转发到后端（Vite 插件懒加载 `server.ts`），
+  开发环境默认用 PGlite（零安装 WASM PostgreSQL），无需单独启动
+- **独立运行**：`pnpm server`（默认监听 `:8787`）
+  - 生产：`PG_CONNECTION_STRING=postgres://... pnpm server`
+  - 开发：`PGLITE_PATH=/tmp/gov-dn42 pnpm server`
 
-mock 后端对 OIDC ID token 仅解码 payload、不做签名校验——仅供开发演示，
+后端对 OIDC ID token 解码 payload 但不校验签名——仅供开发演示，
 生产部署必须用 JWKS 校验签名。子域名采用 NS 委派：申请者提供 NS 记录，
-审批通过后由管理员向 DN42 Registry 提交 zone delegation。
+审批通过后写入 `delegations` 表，bind9 DLZ 模块直接查询 PostgreSQL 提供响应。
+
+部署（systemd + Caddy）见 [`deploy/README.md`](deploy/README.md)。
+bind9 DLZ 集成见 [`dlz/README.md`](dlz/README.md)。
 
 ### OIDC 身份认证配置
 
-子域名注册支持三个 DN42 社区 OIDC 提供商，`client_id` 通过环境变量配置：
+子域名注册支持三个 DN42 社区 OIDC 提供商，采用常规 Authorization Code + client_secret 流。
+`client_id` 在前端硬编码，`client_secret` 由后端环境变量配置：
 
 ```bash
-VITE_OIDC_CLIENT_ID_IEDON=your-client-id \
-VITE_OIDC_CLIENT_ID_G_LOAD=your-client-id \
-VITE_OIDC_CLIENT_ID_HEXPNET=your-client-id \
-pnpm build
+# 后端环境变量（生产）
+OIDC_CLIENT_SECRET_IEDON=your-secret \
+OIDC_CLIENT_SECRET_G_LOAD=your-secret \
+OIDC_CLIENT_SECRET_HEXPNET=your-secret \
+pnpm server
 ```
 
-未配置 `client_id` 的提供商，其登录按钮在点击时会给出配置提示。
+管理员限定为 ASN `4242420078` 的所有者（OIDC 返回的 `dn42` 声明中 ASN 为
+4242420078 的用户）。
 
 ## 部署
 
@@ -97,11 +104,18 @@ pnpm build
 ```
 gov.dn42/
 ├── docs/api.md            # 后端 API 接口契约
+├── deploy/                # 部署配置（systemd / Caddy / PostgreSQL init）
+├── dlz/                   # bind9 DLZ 模块（从 pgsql 读取委派记录）
+├── server/                # 后端服务器（PostgreSQL 生产准备级）
+│   ├── server.ts          # HTTP 路由与业务逻辑
+│   ├── db.ts              # 数据库抽象（pg / pglite 双后端）
+│   └── schema.sql         # PostgreSQL schema
 ├── public/                # 静态资源（favicon 等）
 ├── src/
-│   ├── components/        # 布局与品牌组件（导航、页脚、徽标等）
-│   ├── data/              # 栏目内容数据（新闻、部门、政策、FAQ）
-│   ├── lib/               # API 对接层与工具函数
+│   ├── components/        # 布局与品牌组件
+│   ├── data/              # 栏目内容数据（双语结构）
+│   ├── i18n/              # 国际化（Context + hooks + locales）
+│   ├── lib/               # API 对接层、OIDC、工具函数
 │   ├── pages/             # 路由页面组件
 │   └── styles/global.css  # 全局设计系统
 └── index.html
@@ -109,13 +123,15 @@ gov.dn42/
 
 ## 路线图
 
-- [x] 后端：mock 后端（`server/mockApi.ts`，开发用）
-- [x] 审核流：管理员审批页面（`/admin`）+ 管理员端点
+- [x] 后端：生产准备级后端（`server/server.ts`，PostgreSQL 持久化）
+- [x] 部署：systemd unit + Caddyfile（`deploy/`）
+- [x] DNS：bind9 DLZ 模块（`dlz/`，从 pgsql 读取委派记录）
+- [x] 审核：管理员审批页面（`/admin`）+ ASN 4242420078 限定
 - [x] 委派模式：子域名采用 NS 委派（DS 可选）
-- [ ] 后端：实现生产级后端 API（契约见 `docs/api.md`）
+- [x] 界面：英文版（i18n）
+- [ ] 生产：JWKS 校验 ID token 签名（当前仅解码 payload）
 - [ ] 服务：Whois 信息查询
 - [ ] 服务：网络资源纠纷调解在线申请
-- [x] 界面：英文版（i18n）
 
 ## 贡献
 

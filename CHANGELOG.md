@@ -20,7 +20,11 @@
 - 子域名注册接入 OIDC 身份认证（Authorization Code + PKCE）：支持 iedon / g-load / hexpnet 三个 DN42 社区提供商，回调页消费 PKCE 会话并交由后端换 token
 - Mock 后端（`server/mockApi.ts`）：零依赖（仅 `node:http`）实现全部接口 1–7 + OIDC 回调；开发模式作为 Vite 插件自动挂载 `/api/v1`
 - 管理员审批页面（`/admin`）：表格列出全部申请，支持状态过滤与通过/驳回；管理员端点（`GET /admin/subdomains`、`POST /admin/subdomains/:id/{approve,reject}`）
-- 子域名 NS/DS 委派模式：申请者提供 NS 记录（至少 2 个），DS 可选（DNSSEC）；审批通过后由管理员向 DN42 Registry 提交 zone delegation
+- 子域名 NS/DS 委派模式：申请者提供 NS 记录（至少 2 个），DS 可选（DNSSEC）；审批通过后写入 `delegations` 表，bind9 DLZ 直接查询
+- 生产准备级后端（`server/server.ts`）：数据持久化到 PostgreSQL（开发用 PGlite 零安装）；OIDC 改为常规 client_secret 流；会话 token 鉴权
+- 管理员限定 ASN 4242420078：OIDC `dn42` 声明中 ASN 为 4242420078 的用户自动获得管理员权限
+- 部署配置（`deploy/`）：systemd unit + Caddyfile + PostgreSQL init + 部署指南
+- bind9 DLZ 模块（`dlz/`）：从 PostgreSQL 读取委派记录，自动生成 NS/DS/SOA 响应
 
 ### Changed
 
@@ -31,3 +35,5 @@
 - 子域名注册表单新增身份认证门控：未认证时隐藏表单，展示 OIDC 登录入口
 - 子域名表单：IPv4/IPv6 输入框替换为 NS 记录 textarea（必填，至少 2 条）+ DS 记录 textarea（可选，DNSSEC）
 - 子域名后缀由 `.dn42` 改为 `.gov.dn42`
+- OIDC 从 Authorization Code + PKCE 改为常规 client_secret 流（secret 由后端持有）
+- 后端从 mock（内存）升级为生产准备级（PostgreSQL 持久化）
