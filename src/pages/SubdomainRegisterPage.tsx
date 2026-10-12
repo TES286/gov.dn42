@@ -30,14 +30,21 @@ const PURPOSE_OPTIONS = [
   { value: 'other', labelKey: 'subdomain.purposeOther' },
 ] as const;
 
-function isValidIPv4(raw: string): boolean {
-  const parts = raw.split('.');
-  if (parts.length !== 4) return false;
-  return parts.every((part) => /^\d{1,3}$/.test(part) && Number(part) <= 255);
+/** NS 记录验证：FQDN，每行一个 */
+const NS_PATTERN = /^[a-z0-9]([a-z0-9.-]{0,253}[a-z0-9])?$/i;
+function parseLines(raw: string): string[] {
+  return raw
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
 }
-
-function isValidIPv6(raw: string): boolean {
-  return /^[0-9a-f:]{2,45}$/i.test(raw) && raw.includes(':');
+function isValidNs(value: string): boolean {
+  return NS_PATTERN.test(value) && value.length <= 253;
+}
+/** DS 记录粗验：keyTag algorithm digestType digest */
+const DS_PATTERN = /^\d{1,5}\s+\d{1,3}\s+[124]\s+[0-9a-fA-F]{20,128}$/;
+function isValidDs(value: string): boolean {
+  return DS_PATTERN.test(value.trim());
 }
 
 export default function SubdomainRegisterPage() {
@@ -128,8 +135,8 @@ export default function SubdomainRegisterPage() {
 function SubdomainForm({ user, t }: { user: OidcUser; t: (key: string) => string }) {
   const [name, setName] = useState('');
   const [purpose, setPurpose] = useState<string>(PURPOSE_OPTIONS[0].value);
-  const [ipv4, setIpv4] = useState('');
-  const [ipv6, setIpv6] = useState('');
+  const [ns, setNs] = useState('');
+  const [ds, setDs] = useState('');
   const [contact, setContact] = useState(user.email ?? '');
   const [note, setNote] = useState('');
   const [agree, setAgree] = useState(false);
@@ -158,9 +165,9 @@ function SubdomainForm({ user, t }: { user: OidcUser; t: (key: string) => string
     try {
       const result = await subdomainApi.availability(candidate);
       if (result.available) {
-        setAvailability({ kind: 'ok', message: `“${candidate}.dn42” ${t('subdomain.availOk')}` });
+        setAvailability({ kind: 'ok', message: `"${candidate}.gov.dn42" ${t('subdomain.availOk')}` });
       } else {
-        setAvailability({ kind: 'bad', message: `“${candidate}.dn42” ${t('subdomain.availBad')}` });
+        setAvailability({ kind: 'bad', message: `"${candidate}.gov.dn42" ${t('subdomain.availBad')}` });
       }
     } catch (err) {
       setAvailability({
@@ -185,16 +192,18 @@ function SubdomainForm({ user, t }: { user: OidcUser; t: (key: string) => string
       setSubmit({ kind: 'error', title: t('subdomain.errContact') });
       return;
     }
-    if (ipv4.trim() && !isValidIPv4(ipv4.trim())) {
-      setSubmit({ kind: 'error', title: t('subdomain.errIpv4') });
+    const nsList = parseLines(ns);
+    if (nsList.length < 2) {
+      setSubmit({ kind: 'error', title: t('subdomain.errNsTooFew') });
       return;
     }
-    if (ipv6.trim() && !isValidIPv6(ipv6.trim())) {
-      setSubmit({ kind: 'error', title: t('subdomain.errIpv6') });
+    if (!nsList.every(isValidNs)) {
+      setSubmit({ kind: 'error', title: t('subdomain.errNsFormat') });
       return;
     }
-    if (!ipv4.trim() && !ipv6.trim()) {
-      setSubmit({ kind: 'error', title: t('subdomain.errNoAddr') });
+    const dsList = ds.trim() ? parseLines(ds) : [];
+    if (dsList.length > 0 && !dsList.every(isValidDs)) {
+      setSubmit({ kind: 'error', title: t('subdomain.errDsFormat') });
       return;
     }
     if (!agree) {
@@ -207,8 +216,8 @@ function SubdomainForm({ user, t }: { user: OidcUser; t: (key: string) => string
       const receipt = await subdomainApi.register({
         name: name.trim().toLowerCase(),
         purpose,
-        ipv4: ipv4.trim() || undefined,
-        ipv6: ipv6.trim() || undefined,
+        ns: nsList,
+        ds: dsList.length > 0 ? dsList : undefined,
         contact: contact.trim(),
         note: note.trim() || undefined,
         agree: true,
@@ -323,30 +332,39 @@ function SubdomainForm({ user, t }: { user: OidcUser; t: (key: string) => string
               />
             </div>
 
-            <div className='form-field'>
-              <label htmlFor='sub-ipv4'>{t('subdomain.ipv4Label')}</label>
-              <input
-                id='sub-ipv4'
-                type='text'
-                value={ipv4}
-                onChange={(event) => setIpv4(event.target.value)}
-                placeholder={t('subdomain.ipv4Placeholder')}
-                autoComplete='off'
-                inputMode='numeric'
+            <div className='form-field form-field--full'>
+              <label htmlFor='sub-ns'>
+                {t('subdomain.nsLabel')}
+                <span className='req' aria-hidden='true'>
+                  *
+                </span>
+              </label>
+              <textarea
+                id='sub-ns'
+                value={ns}
+                onChange={(event) => setNs(event.target.value)}
+                placeholder={t('subdomain.nsPlaceholder')}
+                rows={3}
+                aria-describedby='sub-ns-hint'
               />
-              <span className='form-hint'>{t('subdomain.ipvHint')}</span>
+              <span className='form-hint' id='sub-ns-hint'>
+                {t('subdomain.nsHint')}
+              </span>
             </div>
 
-            <div className='form-field'>
-              <label htmlFor='sub-ipv6'>{t('subdomain.ipv6Label')}</label>
-              <input
-                id='sub-ipv6'
-                type='text'
-                value={ipv6}
-                onChange={(event) => setIpv6(event.target.value)}
-                placeholder={t('subdomain.ipv6Placeholder')}
-                autoComplete='off'
+            <div className='form-field form-field--full'>
+              <label htmlFor='sub-ds'>{t('subdomain.dsLabel')}</label>
+              <textarea
+                id='sub-ds'
+                value={ds}
+                onChange={(event) => setDs(event.target.value)}
+                placeholder={t('subdomain.dsPlaceholder')}
+                rows={3}
+                aria-describedby='sub-ds-hint'
               />
+              <span className='form-hint' id='sub-ds-hint'>
+                {t('subdomain.dsHint')}
+              </span>
             </div>
 
             <div className='form-field form-field--full'>

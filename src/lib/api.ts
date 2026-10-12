@@ -17,8 +17,10 @@ export interface AvailabilityResult {
 export interface RegistrationPayload {
   name: string;
   purpose: string;
-  ipv4?: string;
-  ipv6?: string;
+  /** NS 记录列表，至少 2 个名称服务器 */
+  ns: string[];
+  /** DS 记录列表（DNSSEC，可选） */
+  ds?: string[];
   contact: string;
   note?: string;
   agree: true;
@@ -33,6 +35,22 @@ export interface RegistrationReceipt {
   id: string;
   name: string;
   status: 'pending' | 'approved' | 'rejected';
+}
+
+/** 子域名申请详情（查询接口与管理员列表返回） */
+export interface SubdomainApplication {
+  id: string;
+  name: string;
+  status: 'pending' | 'approved' | 'rejected';
+  ns: string[];
+  ds?: string[];
+  purpose: string;
+  contact: string;
+  note?: string;
+  auth?: { providerId: string; sub: string };
+  createdAt: string;
+  /** 驳回时附原因 */
+  reason?: string;
 }
 
 export class ApiError extends Error {
@@ -100,6 +118,37 @@ export const subdomainApi = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
+    }),
+
+  /** 查询申请进度 */
+  get: (id: string) => request<SubdomainApplication>(`/subdomains/${encodeURIComponent(id)}`),
+};
+
+/* ============================================================
+   管理员接口（mock 阶段不鉴权）
+   ============================================================ */
+
+export interface AdminSubdomainList {
+  items: SubdomainApplication[];
+}
+
+export const adminApi = {
+  /** 列出全部申请（可按状态过滤） */
+  list: (status?: 'pending' | 'approved' | 'rejected') =>
+    request<AdminSubdomainList>(`/admin/subdomains${status ? `?status=${status}` : ''}`),
+
+  /** 审批通过 */
+  approve: (id: string) =>
+    request<RegistrationReceipt>(`/admin/subdomains/${encodeURIComponent(id)}/approve`, {
+      method: 'POST',
+    }),
+
+  /** 驳回 */
+  reject: (id: string, reason: string) =>
+    request<RegistrationReceipt>(`/admin/subdomains/${encodeURIComponent(id)}/reject`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason }),
     }),
 };
 

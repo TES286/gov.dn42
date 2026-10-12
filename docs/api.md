@@ -1,7 +1,11 @@
 # gov.dn42 在线服务 API 接口契约（v1）
 
-> 状态：**草案（未实现）**。本文档定义子域名注册服务的后端接口契约；
-> 前端已按此契约完成对接（见 `src/lib/api.ts`），后端实现后即可联调。
+> 状态：**草案**。本文档定义子域名注册服务的后端接口契约；
+> 前端已按此契约完成对接（见 `src/lib/api.ts`），mock 后端见 `server/mockApi.ts`。
+>
+> 委派模式：子域名采用 NS 委派——申请者提供至少 2 个 NS 记录，政府将
+> `<name>.gov.dn42` 的 NS 委派给申请者指定的名称服务器；DS 记录可选（DNSSEC）。
+> 审批后由管理员向 DN42 Registry 提交 zone delegation。
 
 ## 约定
 
@@ -34,6 +38,8 @@
 | HTTP | code | 说明 |
 | --- | --- | --- |
 | 400 | `VALIDATION_ERROR` | 请求参数缺失或格式错误 |
+| 401 | `AUTH_REQUIRED` | 需要身份认证 |
+| 403 | `FORBIDDEN` | 无权访问（如非管理员调用管理员端点） |
 | 404 | `NOT_FOUND` | 资源不存在（后端未部署时静态托管也会返回 404） |
 | 405 | `METHOD_NOT_ALLOWED` | HTTP 方法不支持 |
 | 409 | `NAME_TAKEN` | 子域名已被占用 |
@@ -55,7 +61,7 @@ GET /api/v1/subdomains/availability?name={name}
 
 | 参数 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
-| `name` | string | 是 | 待查询的子域名（不含 `.dn42` 后缀），2-63 字符 |
+| `name` | string | 是 | 待查询的子域名（不含 `.gov.dn42` 后缀），2-63 字符 |
 
 **响应 200**
 
@@ -89,29 +95,50 @@ POST /api/v1/subdomains
 Content-Type: application/json
 ```
 
+子域名采用 **NS 委派**模式：申请者提供至少 2 个 NS 记录，政府将
+`<name>.gov.dn42` 的 NS 委派给申请者指定的名称服务器；DS 记录可选（用于
+DNSSEC 链式签名）。审批通过后由管理员向 DN42 Registry 提交 zone delegation。
+
 **请求体**
 
 ```json
 {
   "name": "example",
-  "purpose": "个人主页",
-  "ipv4": "172.20.0.1",
-  "ipv6": "fd42::1",
+  "purpose": "personal",
+  "ns": ["ns1.example.gov.dn42", "ns2.example.gov.dn42"],
+  "ds": ["12345 8 2 ABCDEF0123456789..."],
   "contact": "user@example.com",
   "note": "可选补充说明",
-  "agree": true
+  "agree": true,
+  "auth": {
+    "providerId": "iedon",
+    "sub": "subject-id"
+  }
 }
 ```
 
 | 字段 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
 | `name` | string | 是 | 子域名，规则同上 |
-| `purpose` | string | 是 | 用途：`个人主页` / `项目站点` / `网络服务` / `其他` |
-| `ipv4` | string | 与 ipv6 至少一项 | A 记录指向地址（后端严格校验） |
-| `ipv6` | string | 与 ipv4 至少一项 | AAAA 记录指向地址（后端严格校验） |
+| `purpose` | string | 是 | 用途：`personal` / `project` / `service` / `other` |
+| `ns` | string[] | 是 | NS 记录列表，至少 2 个名称服务器（FQDN，不含 `.gov.dn42` 后缀亦可） |
+| `ds` | string[] | 否 | DS 记录列表（DNSSEC），格式 `<keyTag> <algorithm> <digestType> <digest>` |
 | `contact` | string | 是 | 联系邮箱 |
 | `note` | string | 否 | 补充说明，≤500 字符 |
 | `agree` | boolean | 是 | 须为 `true`（同意《子域名分配管理办法（试行）》） |
+| `auth` | object | 是 | 已认证用户标识，见接口 5 |
+
+**NS 记录校验规则**
+
+- 每条为一个 FQDN，格式 `^[a-z0-9]([a-z0-9.-]{0,253}[a-z0-9])?$`，长度 ≤253
+- 至少 2 条，至多 10 条
+- 各条不可重复
+
+**DS 记录校验规则（可选）**
+
+- 每条格式 `<keyTag> <algorithm> <digestType> <digest>`，空格分隔
+- `keyTag`：1–65535；`algorithm`：常见值 8/10/13/14/15/16；`digestType`：1（SHA1）/2（SHA256）/4（SHA384）
+- `digest`：16 进制字符串，长度依 `digestType` 而定
 
 **响应 202 Accepted**
 
@@ -126,10 +153,11 @@ Content-Type: application/json
 **错误**
 
 - `400 VALIDATION_ERROR`：字段缺失或格式错误
+- `401 AUTH_REQUIRED`：未携带 `auth` 或身份核验未通过
 - `409 NAME_TAKEN`：已被占用或属于保留字
 - `429 RATE_LIMITED`：请求过于频繁
 
-### 3. 查询申请进度（规划中）
+### 3. 查询申请进度
 
 ```
 GET /api/v1/subdomains/{id}
@@ -142,7 +170,12 @@ GET /api/v1/subdomains/{id}
   "id": "sd-20261012-a1b2c3",
   "name": "example",
   "status": "pending",
-  "createdAt": "2026-10-12T08:00:00Z"
+  "ns": ["ns1.example.gov.dn42", "ns2.example.gov.dn42"],
+  "ds": [],
+  "purpose": "personal",
+  "contact": "user@example.com",
+  "createdAt": "2026-10-12T08:00:00Z",
+  "auth": { "providerId": "iedon", "sub": "subject-id" }
 }
 ```
 
@@ -298,18 +331,116 @@ Content-Type: application/json
 后端凭 `auth.providerId` + `auth.sub` 与已认证会话核验申请人身份；未通过认证的
 申请将返回 `401 AUTH_REQUIRED`。
 
+### 6. 管理员：列出全部申请
+
+```
+GET /api/v1/admin/subdomains[?status=pending]
+```
+
+管理员端点，用于审核。mock 阶段不强制鉴权；生产部署须校验管理员身份。
+
+**查询参数**
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `status` | string | 可选过滤：`pending` / `approved` / `rejected`；不传返回全部 |
+
+**响应 200**
+
+```json
+{
+  "items": [
+    {
+      "id": "sd-20261012-a1b2c3",
+      "name": "example",
+      "status": "pending",
+      "ns": ["ns1.example.gov.dn42", "ns2.example.gov.dn42"],
+      "ds": [],
+      "purpose": "personal",
+      "contact": "user@example.com",
+      "note": "",
+      "auth": { "providerId": "iedon", "sub": "subject-id" },
+      "createdAt": "2026-10-12T08:00:00Z"
+    }
+  ]
+}
+```
+
+**错误**
+
+- `403 FORBIDDEN`：非管理员（生产部署）
+
+### 7. 管理员：审批申请
+
+```
+POST /api/v1/admin/subdomains/{id}/approve
+POST /api/v1/admin/subdomains/{id}/reject
+```
+
+**reject 请求体**
+
+```json
+{ "reason": "驳回理由" }
+```
+
+**响应 200**
+
+```json
+{
+  "id": "sd-20261012-a1b2c3",
+  "status": "approved"
+}
+```
+
+驳回时附 `reason`：
+
+```json
+{
+  "id": "sd-20261012-a1b2c3",
+  "status": "rejected",
+  "reason": "NS 记录指向的名称服务器无响应"
+}
+```
+
+**错误**
+
+- `404 NOT_FOUND`：申请不存在
+- `409 INVALID_STATE`：申请已处理（非 pending）
+- `400 VALIDATION_ERROR`：reject 缺少 `reason`
+
+审批通过后，管理员须手动向 DN42 Registry 提交 zone delegation（NS + DS）。
+mock 后端仅记录状态流转，不自动提交 Registry。
+
 ## 后端实现建议
 
 - **同源部署（推荐）**：前端静态托管后，`/api/v1` 由反向代理转发至后端服务，避免 CORS；
   如前后端分离域名，后端须配置仅允许门户站点来源的 CORS
-- **生效方式**：审核通过后向 DN42 Registry 提交 zone delegation（参见官方 Wiki 的 DNS 章节）
+- **生效方式**：审核通过后由管理员向 DN42 Registry 提交 zone delegation——
+  在 `db/dns/gov.dn42` 中增加 NS 与 DS 记录（参见官方 Wiki 的 DNS 章节）
 - **数据落地**：建议记录申请时间、来源 IP（限频与审计用）与审核状态流转
-- **审核流**：v1 采用人工审核；后续可增加自动化预检（保留字、格式、归属地校验）
-- **举报/意见留档**：写入日志文件（默认 `/dev/null`，可配置为数据库或对象存储）；
+- **审核流**：v1 采用人工审核；管理员通过 `/admin` 页面或管理员端点审批；
+  后续可增加自动化预检（保留字、格式、NS 可达性校验）
+- **举报/意见留档**：写入日志文件（mock 后端写入内存，可配置为文件或对象存储）；
   建议 `contact` 字段脱敏后存储；留档仅供改进与审计参考，不对外公开
+
+## Mock 后端
+
+`server/mockApi.ts` 提供一份零依赖（仅 `node:http`）的 demo 后端，
+实现全部接口（1–7）+ OIDC 回调。数据存储在内存，重启即重置。
+
+开发模式下作为 Vite 插件自动挂载到 `/api/v1`（见 `vite.config.ts`），
+无需单独启动；也可独立运行：
+
+```bash
+node --import tsx server/mockApi.ts
+```
+
+mock 后端对 OIDC ID token 仅解码 payload、不做签名校验——仅供开发演示，
+生产部署必须用 JWKS 校验签名。
 
 ## 变更记录
 
 | 日期 | 说明 |
 | --- | --- |
 | 2026-10-12 | 初版契约草案发布；新增举报与意见箱提交接口（`POST /api/v1/submissions`）；新增 OIDC 认证回调接口（`POST /api/v1/auth/oidc/callback`） |
+| 2026-10-12 | 子域名改为 NS 委派模式（`ns` / `ds` 字段替换 `ipv4` / `ipv6`）；新增管理员端点（6、7）；新增 mock 后端（`server/mockApi.ts`） |
