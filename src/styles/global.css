@@ -621,7 +621,8 @@ code {
 }
 
 .section-title__sub {
-  margin-top: 6px;
+  display: block;
+  margin-top: 8px;
   font-family: var(--font-sans);
   font-size: 14.5px;
   font-weight: 400;
@@ -1518,9 +1519,25 @@ table.table {
     box-shadow: none;
     border: none;
     border-radius: 0;
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(255, 255, 255, 0.05);
     display: none;
     padding: 0 0 6px;
+  }
+
+  .site-nav .sub a {
+    padding: 11px 18px 11px 38px;
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 14.5px;
+  }
+
+  .site-nav .sub a:hover {
+    background: rgba(255, 255, 255, 0.07);
+    color: #fff;
+  }
+
+  .site-nav .sub a[aria-current='page'] {
+    color: var(--c-gold-300);
+    background: rgba(255, 255, 255, 0.06);
   }
 
   .has-sub.open > .sub {
