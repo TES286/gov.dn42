@@ -14,8 +14,10 @@
 
 - [Vite](https://vite.dev/) + [React](https://react.dev/) + TypeScript
 - [react-router-dom](https://reactrouter.com/)：单页应用（SPA）多路由，构建产物为纯静态文件
-- 无任何运行时第三方 UI 依赖；样式为手写设计系统（深蓝 + 鎏金政务风）
+- 无任何运行时第三方 UI 依赖；样式为手写设计系统，遵循 [GOV.UK Design System](https://design-system.service.gov.uk/) 设计规范
 - 无后端。在线服务前端已按 [`docs/api.md`](docs/api.md) 契约预留接口层
+- 内置轻量 i18n（零依赖 Context + hooks），提供中文与英文双语
+- 子域名注册接入 DN42 社区 OIDC 身份认证（Authorization Code + PKCE）
 
 ## 快速开始
 
@@ -36,15 +38,18 @@ pnpm lint       # ESLint 代码检查
 | `/news` | 新闻公告 | 通知公告列表 |
 | `/news/:slug` | 公告详情 | 公告正文页 |
 | `/services` | 公民服务 | 在线服务总览 |
-| `/services/subdomain` | 子域名注册 | 在线申请表单（前端就绪，等待后端） |
+| `/services/subdomain` | 子域名注册 | 在线申请表单（需 OIDC 身份认证，前端就绪，等待后端） |
+| `/auth/callback` | OIDC 回调 | 处理身份认证回调 |
 | `/policy` | 政务公开 | 政策法规与信息公开 |
 | `/faq` | 常见问题 | 公民常见疑问 |
 | `/contact` | 联系我们 | 联系渠道 |
+| `/report` | 举报信箱 | 举报信投递入口（后端记录备案） |
+| `/feedback` | 意见箱 | 意见反馈入口（后端记录备案） |
 | `/legal` | 法律声明 | 网站性质、隐私与免责声明 |
 
 ## 后端 API 预留
 
-子域名注册等在线服务的前端已按 [`docs/api.md`](docs/api.md) 中定义的接口
+子域名注册、举报/意见提交与 OIDC 认证等在线服务的前端已按 [`docs/api.md`](docs/api.md) 中定义的接口
 契约调用，默认指向同源 `/api/v1`，可通过环境变量覆盖：
 
 ```bash
@@ -52,6 +57,19 @@ VITE_API_BASE=https://api.gov.dn42/v1 pnpm build
 ```
 
 后端尚未部署时，表单会以友好的提示优雅降级，不会抛出裸错误。
+
+### OIDC 身份认证配置
+
+子域名注册支持三个 DN42 社区 OIDC 提供商，`client_id` 通过环境变量配置：
+
+```bash
+VITE_OIDC_CLIENT_ID_IEDON=your-client-id \
+VITE_OIDC_CLIENT_ID_G_LOAD=your-client-id \
+VITE_OIDC_CLIENT_ID_HEXPNET=your-client-id \
+pnpm build
+```
+
+未配置 `client_id` 的提供商，其登录按钮在点击时会给出配置提示。
 
 ## 部署
 
@@ -78,9 +96,11 @@ gov.dn42/
 ## 路线图
 
 - [ ] 后端：实现子域名注册 API（契约见 `docs/api.md`，进展见 Issues）
+- [ ] 后端：实现举报与意见箱提交接口（`POST /api/v1/submissions`）
+- [ ] 后端：实现 OIDC 认证回调接口（`POST /api/v1/auth/oidc/callback`）
 - [ ] 服务：Whois 信息查询
 - [ ] 服务：网络资源纠纷调解在线申请
-- [ ] 界面：英文版（i18n）
+- [x] 界面：英文版（i18n）
 
 ## 贡献
 
