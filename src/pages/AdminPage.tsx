@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useI18n } from '../i18n';
 import { Breadcrumb } from '../components/layout/Breadcrumb';
 import { adminApi, ApiError, isServiceUnavailable, type SubdomainApplication } from '../lib/api';
+import { loadOidcUser, type OidcUser } from '../lib/oidc';
 import { usePageTitle } from '../lib/usePageTitle';
 
 type Filter = 'all' | 'pending' | 'approved' | 'rejected';
@@ -9,12 +11,14 @@ type LoadState =
   | { kind: 'loading' }
   | { kind: 'ok'; items: SubdomainApplication[] }
   | { kind: 'error'; message: string }
-  | { kind: 'offline' };
+  | { kind: 'offline' }
+  | { kind: 'forbidden' };
 
 export default function AdminPage() {
   const { t } = useI18n();
   usePageTitle(t('admin.title'));
 
+  const [user] = useState<OidcUser | null>(() => loadOidcUser());
   const [filter, setFilter] = useState<Filter>('pending');
   const [state, setState] = useState<LoadState>({ kind: 'loading' });
   const [toast, setToast] = useState<string | null>(null);
@@ -30,7 +34,9 @@ export default function AdminPage() {
         if (!cancelled) setState({ kind: 'ok', items: result.items });
       } catch (err) {
         if (cancelled) return;
-        if (isServiceUnavailable(err)) {
+        if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+          setState({ kind: 'forbidden' });
+        } else if (isServiceUnavailable(err)) {
           setState({ kind: 'offline' });
         } else if (err instanceof ApiError) {
           setState({ kind: 'error', message: err.message });
@@ -44,7 +50,7 @@ export default function AdminPage() {
     };
   }, [filter, refreshKey, t]);
 
-  const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
+  const refresh = () => setRefreshKey((k) => k + 1);
 
   const handleApprove = async (id: string, name: string) => {
     try {
@@ -86,44 +92,72 @@ export default function AdminPage() {
       </div>
 
       <div className='container page-body'>
-        <div className='admin-tabs'>
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              type='button'
-              className={`admin-tab${filter === tab.id ? ' is-active' : ''}`}
-              onClick={() => setFilter(tab.id)}
-            >
-              {tab.label}
-            </button>
-          ))}
-          <button type='button' className='btn btn--outline admin-refresh' onClick={refresh}>
-            {t('admin.refresh')}
-          </button>
-        </div>
-
-        {toast && (
-          <div className='form-status form-status--ok' role='status'>
-            <p>{toast}</p>
+        {!user && (
+          <div className='callout callout--gold' role='note'>
+            <p>
+              <strong>{t('admin.loginRequired')}</strong>
+              {t('admin.loginRequiredBody')}
+              <Link to='/services/subdomain'>{t('subdomain.authTitle')}</Link>。
+            </p>
           </div>
         )}
 
-        {state.kind === 'loading' && <p>{t('admin.loading')}</p>}
-        {state.kind === 'error' && (
-          <div className='form-status form-status--error' role='alert'>
-            <p>{state.message}</p>
-          </div>
-        )}
-        {state.kind === 'offline' && (
+        {user && !user.isAdmin && (
           <div className='callout' role='note'>
-            <p>{t('admin.offlineHint')}</p>
+            <p>
+              <strong>{t('admin.notAdmin')}</strong>
+              {t('admin.notAdminBody').replace('{asn}', user.dn42 ?? '—')}
+            </p>
           </div>
         )}
-        {state.kind === 'ok' && state.items.length === 0 && (
-          <p className='text-muted'>{t('admin.noItems').replace('{status}', t(`admin.status${filter.charAt(0).toUpperCase() + filter.slice(1)}`))}</p>
-        )}
-        {state.kind === 'ok' && state.items.length > 0 && (
-          <AdminTable items={state.items} onApprove={handleApprove} onReject={handleReject} />
+
+        {user?.isAdmin && (
+          <>
+            <div className='admin-tabs'>
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  type='button'
+                  className={`admin-tab${filter === tab.id ? ' is-active' : ''}`}
+                  onClick={() => setFilter(tab.id)}
+                >
+                  {tab.label}
+                </button>
+              ))}
+              <button type='button' className='btn btn--outline admin-refresh' onClick={refresh}>
+                {t('admin.refresh')}
+              </button>
+            </div>
+
+            {toast && (
+              <div className='form-status form-status--ok' role='status'>
+                <p>{toast}</p>
+              </div>
+            )}
+
+            {state.kind === 'loading' && <p>{t('admin.loading')}</p>}
+            {state.kind === 'error' && (
+              <div className='form-status form-status--error' role='alert'>
+                <p>{state.message}</p>
+              </div>
+            )}
+            {state.kind === 'offline' && (
+              <div className='callout' role='note'>
+                <p>{t('admin.offlineHint')}</p>
+              </div>
+            )}
+            {state.kind === 'forbidden' && (
+              <div className='callout' role='note'>
+                <p>{t('admin.notAdminBody').replace('{asn}', user.dn42 ?? '—')}</p>
+              </div>
+            )}
+            {state.kind === 'ok' && state.items.length === 0 && (
+              <p className='text-muted'>{t('admin.noItems').replace('{status}', t(`admin.status${filter.charAt(0).toUpperCase() + filter.slice(1)}`))}</p>
+            )}
+            {state.kind === 'ok' && state.items.length > 0 && (
+              <AdminTable items={state.items} onApprove={handleApprove} onReject={handleReject} />
+            )}
+          </>
         )}
       </div>
     </>

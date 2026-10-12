@@ -68,11 +68,25 @@ export class ApiError extends Error {
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const { headers, ...rest } = init ?? {};
 
+  // 自动附加会话 token（若有）
+  const authHeaders: Record<string, string> = { Accept: 'application/json' };
+  try {
+    const raw = localStorage.getItem('gov-dn42-oidc-user');
+    if (raw) {
+      const user = JSON.parse(raw) as { token?: string };
+      if (user.token) {
+        authHeaders.Authorization = `Bearer ${user.token}`;
+      }
+    }
+  } catch {
+    // 忽略解析失败
+  }
+
   let response: Response;
   try {
     response = await fetch(`${API_BASE}${path}`, {
       ...rest,
-      headers: { Accept: 'application/json', ...headers },
+      headers: { ...authHeaders, ...headers },
     });
   } catch {
     throw new ApiError('无法连接注册服务', 0, 'NETWORK_ERROR');
@@ -193,8 +207,6 @@ export const submissionsApi = {
 export interface OidcCallbackPayload {
   providerId: string;
   code: string;
-  /** PKCE code_verifier，由后端用于换取 token */
-  codeVerifier: string;
   /** 授权重定向地址，供后端校验 */
   redirectUri: string;
 }
@@ -206,7 +218,11 @@ export interface OidcAuthResult {
     name?: string;
     email?: string;
     dn42?: string;
+    /** 是否管理员（dn42 声明中 ASN = 4242420078） */
+    isAdmin?: boolean;
   };
+  /** 后端下发的会话 token，前端在后续请求中通过 Authorization: Bearer 携带 */
+  token?: string;
 }
 
 /** OIDC 认证接口 */

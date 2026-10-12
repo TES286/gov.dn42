@@ -291,7 +291,11 @@ export const en: typeof zh = {
   },
   admin: {
     title: 'Admin review',
-    sub: 'Review subdomain registration applications. The mock backend does not enforce admin auth; production deployments must.',
+    sub: 'Review subdomain registration applications. Only the holder of ASN 4242420078 may access this page.',
+    loginRequired: 'Sign-in required: ',
+    loginRequiredBody: 'Please sign in at the ',
+    notAdmin: 'Not authorised: ',
+    notAdminBody: 'Current user ({asn}) is not an administrator. Only the holder of ASN 4242420078 may access this page.',
     tabAll: 'All',
     tabPending: 'Pending',
     tabApproved: 'Approved',

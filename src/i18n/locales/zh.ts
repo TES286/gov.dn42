@@ -289,7 +289,11 @@ export const zh = {
   },
   admin: {
     title: '管理员审批',
-    sub: '审核子域名注册申请。mock 阶段不鉴权；生产部署须校验管理员身份。',
+    sub: '审核子域名注册申请。仅 ASN 4242420078 的所有者可访问。',
+    loginRequired: '需要登录：',
+    loginRequiredBody: '请先在',
+    notAdmin: '权限不足：',
+    notAdminBody: '当前用户（{asn}）不是管理员，仅 ASN 4242420078 的所有者可访问此页面。',
     tabAll: '全部',
     tabPending: '待审核',
     tabApproved: '已通过',

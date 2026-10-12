@@ -50,10 +50,9 @@ export default function AuthCallbackPage() {
         const result = await authApi.callback({
           providerId: session.providerId,
           code,
-          codeVerifier: session.codeVerifier,
           redirectUri,
         });
-        saveOidcUser(result.user);
+        saveOidcUser({ ...result.user, token: result.token });
         setState({ kind: 'success' });
         setTimeout(() => navigate('/services/subdomain'), 1500);
       } catch (err) {

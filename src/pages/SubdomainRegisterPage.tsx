@@ -53,11 +53,11 @@ export default function SubdomainRegisterPage() {
 
   const [user, setUser] = useState<OidcUser | null>(() => loadOidcUser());
 
-  const handleLogin = async (providerId: string) => {
+  const handleLogin = (providerId: string) => {
     const provider = OIDC_PROVIDERS.find((p) => p.id === providerId);
     if (!provider) return;
     try {
-      await redirectToAuthorize(provider);
+      redirectToAuthorize(provider);
     } catch (err) {
       // client_id 未配置等错误：提示用户
       console.error(err);
@@ -114,7 +114,7 @@ export default function SubdomainRegisterPage() {
                     key={provider.id}
                     type='button'
                     className='btn btn--outline'
-                    onClick={() => void handleLogin(provider.id)}
+                    onClick={() => handleLogin(provider.id)}
                   >
                     {t('subdomain.loginWith').replace('{provider}', provider.displayName)}
                   </button>
