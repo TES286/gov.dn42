@@ -784,6 +784,7 @@ a.news-item:hover {
 }
 
 .news-item__title {
+  display: block;
   font-size: 16.5px;
   font-weight: 600;
   color: var(--c-ink-900);
