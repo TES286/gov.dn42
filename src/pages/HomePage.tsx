@@ -1,36 +1,9 @@
 import { Link } from 'react-router-dom'
+import { ServiceCard } from '../components/ui/ServiceCard'
 import { departments } from '../data/departments'
 import { newsItems } from '../data/news'
-import { services, STATUS_META, type ServiceItem } from '../data/services'
+import { services } from '../data/services'
 import { usePageTitle } from '../lib/usePageTitle'
-
-function ServiceCard({ service }: { service: ServiceItem }) {
-  const meta = STATUS_META[service.status]
-  const body = (
-    <>
-      <span className={`tag ${meta.className}`}>{meta.label}</span>
-      <h3>{service.name}</h3>
-      <p>{service.desc}</p>
-      {service.status !== 'planned' && <span className="card__more">了解更多 →</span>}
-    </>
-  )
-
-  if (service.to) {
-    return (
-      <Link className="card" to={service.to}>
-        {body}
-      </Link>
-    )
-  }
-  if (service.href) {
-    return (
-      <a className="card" href={service.href} target="_blank" rel="noreferrer">
-        {body}
-      </a>
-    )
-  }
-  return <div className="card">{body}</div>
-}
 
 function NewsPreview() {
   return (

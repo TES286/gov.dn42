@@ -1188,6 +1188,10 @@ table.table {
   margin-top: 6px;
 }
 
+.callout--spaced {
+  margin-top: 28px;
+}
+
 /* ---------- 联系卡片 ---------- */
 .contact-grid {
   display: grid;
