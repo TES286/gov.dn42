@@ -1,0 +1,41 @@
+# gov.dn42 后端 systemd unit
+#
+# 安装：
+#   sudo cp deploy/gov-dn42-backend.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now gov-dn42-backend
+#
+# 查看日志：
+#   journalctl -u gov-dn42-backend -f
+#
+# 环境变量文件：/etc/gov-dn42/backend.env（见 deploy/backend.env.example）
+
+[Unit]
+Description=gov.dn42 backend API server
+Documentation=https://github.com/TES286/gov.dn42
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=gov-dn42
+Group=gov-dn42
+WorkingDirectory=/opt/gov-dn42
+EnvironmentFile=/etc/gov-dn42/backend.env
+ExecStart=/usr/bin/node --import tsx server/server.ts
+Restart=on-failure
+RestartSec=5s
+
+# 安全加固
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/lib/gov-dn42
+
+# 资源限制
+MemoryMax=512M
+LimitNOFILE=4096
+
+[Install]
+WantedBy=multi-user.target

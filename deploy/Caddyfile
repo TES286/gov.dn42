@@ -1,0 +1,47 @@
+# gov.dn42 Caddyfile 示例
+#
+# Caddy 统一管理前后端：
+#   - 前端静态文件（dist/）由 caddy 直接 serve
+#   - /api/v1/* 反代到后端（localhost:8787）
+#   - 自动 HTTPS（Let's Encrypt）
+#
+# 安装：
+#   sudo cp deploy/Caddyfile /etc/caddy/Caddyfile.d/gov-dn42
+#   sudo systemctl reload caddy
+#
+# 前端构建产物部署到 /var/www/gov-dn42/dist
+
+gov.dn42 {
+	encode gzip zstd
+
+	# 后端 API 反代
+	@api path /api/v1/*
+	handle @api {
+		reverse_proxy localhost:8787 {
+			# 传递真实客户端 IP 与协议
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+
+	# 前端静态文件（SPA 回退到 index.html）
+	handle {
+		root * /var/www/gov-dn42/dist
+		try_files {path} /index.html
+		file_server
+	}
+
+	# 安全头
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+}
+
+# 可选：www 重定向到根域名
+www.gov.dn42 {
+	redir https://gov.dn42{uri} permanent
+}
