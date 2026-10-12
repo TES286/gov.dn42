@@ -906,6 +906,12 @@ table.table {
   white-space: nowrap;
 }
 
+.table .doc-desc {
+  color: var(--c-ink-500);
+  font-size: 13.5px;
+  font-weight: 400;
+}
+
 /* ---------- 表单 ---------- */
 .form-panel {
   max-width: 860px;
